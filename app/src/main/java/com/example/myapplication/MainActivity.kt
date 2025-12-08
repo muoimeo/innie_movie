@@ -1,0 +1,107 @@
+package com.example.myapplication
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.viewModels
+import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
+import com.example.myapplication.data.local.db.DatabaseProvider
+import com.example.myapplication.data.repository.AuthRepository
+import com.example.myapplication.ui.navigation.Screen
+import com.example.myapplication.ui.screens.auth.AuthViewModel
+import com.example.myapplication.ui.screens.auth.CheckEmailScreen
+import com.example.myapplication.ui.screens.auth.LoginScreen
+import com.example.myapplication.ui.screens.auth.OnBoardingScreen
+import com.example.myapplication.ui.screens.auth.SignUpScreen
+import com.example.myapplication.ui.screens.home.HomeScreen
+import com.example.myapplication.ui.theme.MyApplicationTheme
+
+class AuthViewModelFactory(
+    private val repository: AuthRepository
+) : ViewModelProvider.Factory {
+    @Suppress("UNCHECKED_CAST")
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
+            return AuthViewModel(repository) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
+}
+
+class MainActivity : ComponentActivity() {
+
+    private val authViewModel: AuthViewModel by viewModels {
+        val db = DatabaseProvider.getDatabase(this)
+        val repo = AuthRepository(db.userDao())
+        AuthViewModelFactory(repo)
+    }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent {
+            MyApplicationTheme {
+                val navController = rememberNavController()
+
+                NavHost(
+                    navController = navController,
+                    startDestination = Screen.OnBoarding.route
+                ) {
+                    composable(Screen.OnBoarding.route) {
+                        OnBoardingScreen(
+                            onGetStarted = {
+                                navController.navigate(Screen.Login.route)
+                            }
+                        )
+                    }
+                    composable(Screen.Login.route) {
+                        LoginScreen(
+                            viewModel = authViewModel,
+                            onLoginSuccess = {
+                                navController.navigate(Screen.Home.route) {
+                                    popUpTo(Screen.Login.route) { inclusive = true }
+                                }
+                            },
+                            onGoToSignUp = {
+                                navController.navigate(Screen.SignUp.route)
+                            },
+                            onForgotPassword = {
+                                navController.navigate(Screen.CheckEmail.route)
+                            }
+                        )
+                    }
+                    composable(Screen.SignUp.route) {
+                        SignUpScreen(
+                            viewModel = authViewModel,
+                            onSignUpSuccess = {
+                                // Handled internally by onBackToLogin
+                            },
+                            onBackToLogin = {
+                                navController.popBackStack()
+                            }
+                        )
+                    }
+                    composable(Screen.CheckEmail.route) {
+                        CheckEmailScreen(
+                            onVerifySuccess = {
+                                navController.popBackStack(
+                                    Screen.Login.route,
+                                    inclusive = false
+                                )
+                            },
+                            onBack = { navController.popBackStack() }
+                        )
+                    }
+                    composable(Screen.Home.route) {
+                        val state = authViewModel.state.collectAsState()
+                        HomeScreen(username = state.value.currentUser?.username ?: "User")
+                    }
+                }
+            }
+        }
+    }
+}
