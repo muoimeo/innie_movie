@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
                             viewModel = authViewModel,
                             onLoginSuccess = {
                                 navController.navigate(Screen.Home.route) {
-                                    popUpTo(Screen.Login.route) { inclusive = true }
+                                    popUpTo(Screen.OnBoarding.route) { inclusive = true }
                                 }
                             },
                             onGoToSignUp = {
@@ -98,7 +98,10 @@ class MainActivity : ComponentActivity() {
                     }
                     composable(Screen.Home.route) {
                         val state = authViewModel.state.collectAsState()
-                        HomeScreen(username = state.value.currentUser?.username ?: "User")
+                        HomeScreen(
+                            username = state.value.currentUser?.username ?: "User",
+                            authViewModel = authViewModel
+                        )
                     }
                 }
             }
