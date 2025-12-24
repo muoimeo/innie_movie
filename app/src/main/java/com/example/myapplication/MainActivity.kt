@@ -35,6 +35,10 @@ class AuthViewModelFactory(
 
 class MainActivity : ComponentActivity() {
 
+    // === DEV FLAG: Set to true to skip login and go directly to Home ===
+    private val SKIP_AUTH_FOR_DEV = true // Change to false to require login
+    // ===================================================================
+
     private val authViewModel: AuthViewModel by viewModels {
         val db = DatabaseProvider.getDatabase(this)
         val repo = AuthRepository(db.userDao())
@@ -49,7 +53,7 @@ class MainActivity : ComponentActivity() {
 
                 NavHost(
                     navController = navController,
-                    startDestination = Screen.OnBoarding.route
+                    startDestination = if (SKIP_AUTH_FOR_DEV) Screen.Home.route else Screen.OnBoarding.route
                 ) {
                     composable(Screen.OnBoarding.route) {
                         OnBoardingScreen(

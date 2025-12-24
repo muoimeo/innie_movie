@@ -2,6 +2,7 @@ package com.example.myapplication.ui.screens.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -93,7 +94,9 @@ val featuredAlbums = listOf(
 
 @Composable
 fun AlbumFeed(
-    onAlbumClick: (String) -> Unit
+    onAlbumClick: (String) -> Unit,
+    onSearchClick: () -> Unit = {},
+    onFilterClick: () -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
 
@@ -102,61 +105,104 @@ fun AlbumFeed(
             .fillMaxSize()
             .background(Color.White)
     ) {
-        // Search bar row
+        // Search bar row - matching NewsFeed style (no blur)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Search Bar
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(36.dp)
+                    .background(Color.White, RoundedCornerShape(8.dp))
+                    .border(0.5.dp, Color(0xFFB3B3B3), RoundedCornerShape(8.dp))
+                    .clickable { onSearchClick() }
+                    .padding(horizontal = 12.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Search,
+                        contentDescription = "Search",
+                        modifier = Modifier.size(16.dp),
+                        tint = Color(0xFF1A202C)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Find your album",
+                        color = Color(0xFF1A202C),
+                        fontSize = 11.sp
+                    )
+                }
+            }
+            
+            // Filter Button
+            Box(
+                modifier = Modifier
+                    .height(36.dp)
+                    .background(Color.White, RoundedCornerShape(8.dp))
+                    .border(0.5.dp, Color(0xFFB3B3B3), RoundedCornerShape(8.dp))
+                    .clickable { onFilterClick() }
+                    .padding(horizontal = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.FilterList,
+                        contentDescription = "Filter",
+                        modifier = Modifier.size(14.dp),
+                        tint = Color(0xFF1A202C)
+                    )
+                    Text(
+                        text = "Filter",
+                        color = Color(0xFF1A202C),
+                        fontSize = 11.sp
+                    )
+                }
+            }
+        }
+
+        // Featured header with dividers - matching NewsFeed style
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { searchQuery = it },
-                placeholder = { Text("Find your lists", color = Color.Gray) },
-                leadingIcon = {
-                    Icon(
-                        imageVector = Icons.Outlined.Search,
-                        contentDescription = null,
-                        tint = Color.Gray
-                    )
-                },
+            // Left divider
+            Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(50.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = InnieGreen,
-                    unfocusedBorderColor = Color.LightGray
-                ),
-                singleLine = true
+                    .height(0.5.dp)
+                    .background(Color(0xFF1A202C))
             )
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            IconButton(
-                onClick = { /* TODO: Filter */ },
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFFF5F5F5))
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.FilterList,
-                    contentDescription = "Filter",
-                    tint = Color.DarkGray
-                )
-            }
-        }
-
-        // Featured header
-        Text(
-            text = "Featured",
-            style = MaterialTheme.typography.headlineSmall.copy(
+            
+            // "Featured" text
+            Text(
+                text = "Featured",
+                color = InnieGreen,
                 fontWeight = FontWeight.Bold,
-                color = InnieGreen
-            ),
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-        )
+                fontSize = 17.sp,
+                modifier = Modifier.padding(horizontal = 12.dp)
+            )
+            
+            // Right divider
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(0.5.dp)
+                    .background(Color(0xFF1A202C))
+            )
+        }
 
         // Grid of albums
         LazyVerticalGrid(
@@ -275,7 +321,7 @@ fun AlbumGridCard(
 
             // View list link
             Text(
-                text = "View list >",
+                text = "View album >",
                 style = MaterialTheme.typography.bodySmall.copy(
                     color = InnieGreen,
                     fontWeight = FontWeight.Medium
