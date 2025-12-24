@@ -103,60 +103,72 @@ fun HomeContent(
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = HomeTopTab.entries
     val isNewsTab = tabs[selectedTab] == HomeTopTab.NEWS
+    val isShotsTab = tabs[selectedTab] == HomeTopTab.SHOTS
 
-    if (isNewsTab) {
-        // Special layout for News tab - hero image behind navbar
-        NewsTabLayout(
-            selectedTab = selectedTab,
-            onTabSelected = { selectedTab = it },
-            tabs = tabs
-        )
-    } else {
-        // Normal layout for other tabs
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .background(Color.White)
-        ) {
-            // Logo Header - dùng image (ẩn khi ở News tab)
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp, bottom = 6.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Image(
-                    painter = painterResource(id = R.drawable.innie_movie_logo),
-                    contentDescription = "Innie Movie Logo",
-                    modifier = Modifier.height(40.dp),
-                    contentScale = ContentScale.Fit
-                )
-            }
-
-            // TopTab Row (Pill Slider)
-            TopTabBar(
+    when {
+        isNewsTab -> {
+            // Special layout for News tab - hero image behind navbar
+            NewsTabLayout(
                 selectedTab = selectedTab,
                 onTabSelected = { selectedTab = it },
-                tabs = tabs,
-                isOverlay = false
+                tabs = tabs
             )
+        }
+        isShotsTab -> {
+            // Special layout for Shots tab - video behind navbar
+            ShotsTabLayout(
+                selectedTab = selectedTab,
+                onTabSelected = { selectedTab = it },
+                tabs = tabs
+            )
+        }
+        else -> {
+            // Normal layout for other tabs
+            Column(
+                modifier = modifier
+                    .fillMaxSize()
+                    .background(Color.White)
+            ) {
+                // Logo Header - dùng image (ẩn khi ở News tab)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp, bottom = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.innie_movie_logo),
+                        contentDescription = "Innie Movie Logo",
+                        modifier = Modifier.height(40.dp),
+                        contentScale = ContentScale.Fit
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(4.dp))
+                // TopTab Row (Pill Slider)
+                TopTabBar(
+                    selectedTab = selectedTab,
+                    onTabSelected = { selectedTab = it },
+                    tabs = tabs,
+                    isOverlay = false
+                )
 
-            // Content based on selected TopTab
-            when (tabs[selectedTab]) {
-                HomeTopTab.HOME -> HomeFeed(
-                    username = username,
-                    onMovieClick = { /* TODO */ },
-                    onAlbumClick = { /* TODO */ },
-                    onReviewClick = { /* TODO */ },
-                    onProfileClick = { /* TODO */ }
-                )
-                HomeTopTab.ALBUM -> AlbumFeed(
-                    onAlbumClick = { /* TODO */ }
-                )
-                HomeTopTab.NEWS -> NewsFeed()
-                HomeTopTab.SHOTS -> ShotsFeed()
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Content based on selected TopTab
+                when (tabs[selectedTab]) {
+                    HomeTopTab.HOME -> HomeFeed(
+                        username = username,
+                        onMovieClick = { /* TODO */ },
+                        onAlbumClick = { /* TODO */ },
+                        onReviewClick = { /* TODO */ },
+                        onProfileClick = { /* TODO */ }
+                    )
+                    HomeTopTab.ALBUM -> AlbumFeed(
+                        onAlbumClick = { /* TODO */ }
+                    )
+                    HomeTopTab.NEWS -> NewsFeed()
+                    HomeTopTab.SHOTS -> ShotsFeed()
+                }
             }
         }
     }
@@ -245,6 +257,35 @@ fun NewsTabLayout(
             
             // Search and Filter bar with blur
             NewsSearchBar()
+        }
+    }
+}
+
+@Composable
+fun ShotsTabLayout(
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit,
+    tabs: List<HomeTopTab>
+) {
+    Box(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        // Shots Feed content (with video at background)
+        ShotsFeed()
+        
+        // Overlay: TopTab only (no search bar for shots)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 58.dp) // Logo height space
+        ) {
+            // TopTab with blur background
+            TopTabBar(
+                selectedTab = selectedTab,
+                onTabSelected = onTabSelected,
+                tabs = tabs,
+                isOverlay = true
+            )
         }
     }
 }
@@ -359,22 +400,6 @@ fun FeaturedHeaderWithDividers() {
                 .weight(1f)
                 .height(0.5.dp)
                 .background(Color(0xFF1A202C))
-        )
-    }
-}
-
-
-
-@Composable
-fun ShotsFeed() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "Shots Feed\n(Coming Soon)",
-            textAlign = TextAlign.Center,
-            color = Color.Gray
         )
     }
 }
