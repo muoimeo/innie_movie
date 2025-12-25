@@ -20,6 +20,10 @@ import com.example.myapplication.ui.screens.auth.OnBoardingScreen
 import com.example.myapplication.ui.screens.auth.SignUpScreen
 import com.example.myapplication.ui.screens.home.HomeScreen
 import com.example.myapplication.ui.theme.MyApplicationTheme
+import com.example.myapplication.ui.screens.community.MoviePage
+import androidx.navigation.navArgument
+import androidx.navigation.NavType
+import androidx.navigation.NavController
 
 class AuthViewModelFactory(
     private val repository: AuthRepository
@@ -104,10 +108,12 @@ class MainActivity : ComponentActivity() {
                         val state = authViewModel.state.collectAsState()
                         HomeScreen(
                             username = state.value.currentUser?.username ?: "User",
-                            authViewModel = authViewModel
+                            authViewModel = authViewModel,
+                            navController = navController
                         )
                     }
-                }
+
+                                    }
             }
         }
     }

@@ -18,7 +18,7 @@ sealed class BottomNavItem(
     val unselectedIcon: ImageVector
 ) {
     data object Home : BottomNavItem(
-        route = "home_tab",
+        route = "home",
         label = "Home",
         selectedIcon = Icons.Filled.Home,
         unselectedIcon = Icons.Outlined.Home
@@ -30,6 +30,7 @@ sealed class BottomNavItem(
         selectedIcon = Icons.Filled.Person, // Will use custom icon later
         unselectedIcon = Icons.Outlined.Person
     )
+
     
     data object Search : BottomNavItem(
         route = "search_tab",
@@ -55,4 +56,12 @@ sealed class BottomNavItem(
     companion object {
         val items = listOf(Home, Community, Search, Notifications, Profile)
     }
+
+    object MovieDetail : Screen("movie_detail/{movieId}") {
+        fun createRoute(movieId: Int) = "movie_detail/$movieId"
+    }
+
+
 }
+
+

@@ -29,6 +29,9 @@ import com.example.myapplication.data.followingReviews
 import com.example.myapplication.data.forYouReviews
 import com.example.myapplication.ui.theme.*
 import androidx.compose.foundation.layout.FlowRow
+import androidx.navigation.NavController
+import com.example.myapplication.ui.navigation.Screen
+
 // Enum cho Tab điều hướng phía trên
 enum class CommunityTopTap(val title: String) {
     Following("Following"),
@@ -254,7 +257,7 @@ fun CommunityReviewItem(review: MovieReview) {
             )
         }
 
-        // CỘT 3: POSTER PHIM
+
         Card(
             shape = RoundedCornerShape(4.dp),
             modifier = Modifier
@@ -266,7 +269,9 @@ fun CommunityReviewItem(review: MovieReview) {
                 painter = painterResource(id = review.posterRes),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier
+                    .fillMaxSize()
+
             )
         }
     }

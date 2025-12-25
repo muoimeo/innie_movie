@@ -48,6 +48,7 @@ import com.example.myapplication.ui.screens.notifications.NotificationsScreen
 import com.example.myapplication.ui.screens.profile.ProfileScreen
 import com.example.myapplication.ui.screens.search.SearchScreen
 import com.example.myapplication.ui.theme.InnieGreen
+import androidx.navigation.NavController
 
 enum class HomeTopTab(val title: String) {
     HOME("Home"),
@@ -59,7 +60,8 @@ enum class HomeTopTab(val title: String) {
 @Composable
 fun HomeScreen(
     username: String,
-    authViewModel: AuthViewModel
+    authViewModel: AuthViewModel,
+    navController: NavController
 ) {
     var currentRoute by remember { mutableStateOf(BottomNavItem.Home.route) }
 
