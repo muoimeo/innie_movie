@@ -43,7 +43,7 @@ import com.example.myapplication.R
 import com.example.myapplication.ui.components.BottomNavBar
 import com.example.myapplication.ui.navigation.BottomNavItem
 import com.example.myapplication.ui.screens.auth.AuthViewModel
-import com.example.myapplication.ui.screens.community.CommunityScreen
+import com.example.myapplication.ui.screens.community.CommunityContent
 import com.example.myapplication.ui.screens.notifications.NotificationsScreen
 import com.example.myapplication.ui.screens.profile.ProfileScreen
 import com.example.myapplication.ui.screens.search.SearchScreen
@@ -80,7 +80,7 @@ fun HomeScreen(
                     modifier = Modifier.padding(paddingValues)
                 )
             }
-            BottomNavItem.Community.route -> CommunityScreen()
+            BottomNavItem.Community.route -> CommunityContent()
             BottomNavItem.Search.route -> SearchScreen()
             BottomNavItem.Notifications.route -> NotificationsScreen()
             BottomNavItem.Profile.route -> ProfileScreen()
