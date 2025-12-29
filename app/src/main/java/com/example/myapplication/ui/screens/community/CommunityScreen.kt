@@ -40,9 +40,9 @@ enum class CommunityTopTap(val title: String) {
 
 @Composable
 fun CommunityContent(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    navController: NavController // THÊM THAM SỐ NÀY ĐỂ TRUYỀN XUỐNG DƯỚI
 ) {
-    // Trạng thái chọn Tab: 0 là Following, 1 là For you (Mặc định chọn 1 theo UI mẫu)
     var selectedTab by remember { mutableIntStateOf(1) }
     val tabs = CommunityTopTap.entries
 
@@ -51,19 +51,21 @@ fun CommunityContent(
             .fillMaxSize()
             .background(Color.White)
     ) {
-        // 1. Header: Nút Back - Pill Toggle - Nút Option
+        // 1. Header
         CommunityHeader(
             selectedTab = selectedTab,
             onTabSelected = { selectedTab = it },
-            tabs = tabs
+            tabs = tabs,
+            navController = navController // TRUYỀN NAVCONTROLLER
         )
 
-        // Đường kẻ phân cách mỏng dưới Header
         HorizontalDivider(thickness = 0.5.dp, color = Color(0xFFE0E0E0))
 
-        // 2. Danh sách Feed: Hiển thị dữ liệu dựa trên Tab được chọn
+        // 2. Danh sách Feed
         val data = if (selectedTab == 0) followingReviews else forYouReviews
-        ReviewFeedList(reviews = data)
+
+        // TRUYỀN NAVCONTROLLER VÀO ĐÂY (Hết lỗi dòng 66)
+        ReviewFeedList(reviews = data, navController = navController)
     }
 }
 
@@ -71,7 +73,8 @@ fun CommunityContent(
 fun CommunityHeader(
     selectedTab: Int,
     onTabSelected: (Int) -> Unit,
-    tabs: List<CommunityTopTap>
+    tabs: List<CommunityTopTap>,
+    navController: NavController // THÊM THAM SỐ
 ) {
     Row(
         modifier = Modifier
@@ -83,10 +86,9 @@ fun CommunityHeader(
         Icon(
             imageVector = Icons.Default.ArrowBack,
             contentDescription = "Back",
-            modifier = Modifier.size(24.dp).clickable { /* Xử lý back */ }
+            modifier = Modifier.size(24.dp).clickable { navController.popBackStack() }
         )
 
-        // Thanh gạt Pill Toggle ở giữa
         Box(modifier = Modifier.width(200.dp)) {
             CommunityPillToggle(selectedTab, onTabSelected, tabs)
         }
@@ -137,12 +139,14 @@ fun CommunityPillToggle(
 
 @Composable
 fun ReviewFeedList(
-    reviews: List<MovieReview>
+    reviews: List<MovieReview>,
+    navController: NavController // NHẬN NAVCONTROLLER
 ) {
     LazyColumn(modifier = Modifier.fillMaxSize()) {
         items(reviews) { review ->
-            CommunityReviewItem(review)
-            // Đường kẻ ngăn cách giữa các bài review
+            // TRUYỀN TIẾP XUỐNG ITEM
+            CommunityReviewItem(review = review, navController = navController)
+
             HorizontalDivider(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 thickness = 0.5.dp,
@@ -152,15 +156,17 @@ fun ReviewFeedList(
     }
 }
 
-
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun CommunityReviewItem(review: MovieReview) {
+fun CommunityReviewItem(
+    review: MovieReview,
+    navController: NavController // NHẬN NAVCONTROLLER
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(16.dp)
-            .height(IntrinsicSize.Min), // Buộc Column nội dung cao bằng Poster
+            .height(IntrinsicSize.Min),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // CỘT 1: AVATAR
@@ -174,14 +180,8 @@ fun CommunityReviewItem(review: MovieReview) {
         )
 
         // CỘT 2: NỘI DUNG VĂN BẢN
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight() // Đảm bảo cột nội dung luôn cao bằng poster
-        ) {
-            // Khối thông tin phía trên (Chiếm phần lớn không gian)
+        Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
             Column(modifier = Modifier.weight(1f)) {
-                // Tên phim và năm
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = review.movieTitle,
@@ -192,14 +192,9 @@ fun CommunityReviewItem(review: MovieReview) {
                         modifier = Modifier.weight(1f, fill = false)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = review.year,
-                        color = Color.Gray,
-                        fontSize = 11.sp
-                    )
+                    Text(text = review.year, color = Color.Gray, fontSize = 11.sp)
                 }
 
-                // FlowRow xử lý xuống dòng cho Review by và Stats
                 FlowRow(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -234,7 +229,6 @@ fun CommunityReviewItem(review: MovieReview) {
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // Nội dung review - Luôn giới hạn dòng để không đẩy nút Read more ra ngoài
                 Text(
                     text = review.reviewText,
                     fontSize = 13.sp,
@@ -245,19 +239,21 @@ fun CommunityReviewItem(review: MovieReview) {
                 )
             }
 
-            // NÚT READ MORE: Đặt ở đây để luôn xuất hiện ở đáy của phạm vi Poster
             Text(
                 text = "Read more >",
                 color = Color(0xFF00C02B),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier
-                    .clickable { /* Điều hướng chi tiết */ }
+                    .clickable {
+                        // CŨNG CÓ THỂ ĐIỀU HƯỚNG Ở ĐÂY NẾU MUỐN
+                        navController.navigate(Screen.MoviePage.createRoute(review.posterRes))
+                    }
                     .padding(top = 4.dp)
             )
         }
 
-
+        // POSTER CỦA PHIM (KHI CLICK SẼ CHUYỂN TRANG)
         Card(
             shape = RoundedCornerShape(4.dp),
             modifier = Modifier
@@ -271,7 +267,10 @@ fun CommunityReviewItem(review: MovieReview) {
                 contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .fillMaxSize()
-
+                    .clickable {
+                        // SỬ DỤNG NGOẶC NHỌN VÀ POSTER RES LÀM ID
+                        navController.navigate(Screen.MoviePage.createRoute(review.posterRes))
+                    }
             )
         }
     }

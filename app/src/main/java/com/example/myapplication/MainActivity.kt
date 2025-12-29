@@ -113,7 +113,13 @@ class MainActivity : ComponentActivity() {
                         )
                     }
 
-                                    }
+                    composable(
+                        route = Screen.MoviePage.route,
+                        arguments = listOf(navArgument("movieId") { type = NavType.IntType })
+                    ) { backStackEntry ->
+                        val id = backStackEntry.arguments?.getInt("movieId") ?: 0
+                        MoviePage(movieId = id, navController = navController)
+                    }                }
             }
         }
     }

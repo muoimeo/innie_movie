@@ -82,10 +82,10 @@ fun HomeScreen(
                     modifier = Modifier.padding(paddingValues)
                 )
             }
-            BottomNavItem.Community.route -> CommunityContent()
+            BottomNavItem.Community.route -> CommunityContent(navController = navController)
             BottomNavItem.Search.route -> SearchScreen()
             BottomNavItem.Notifications.route -> NotificationsScreen()
-            BottomNavItem.Profile.route -> ProfileScreen()
+            BottomNavItem.Profile.route -> ProfileScreen(navController= navController)
             else -> {
                 // Fallback để tránh crash
                 HomeContent(

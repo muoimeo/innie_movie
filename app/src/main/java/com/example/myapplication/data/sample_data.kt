@@ -2,6 +2,7 @@ package com.example.myapplication.data
 
 import com.example.myapplication.R
 import com.example.myapplication.data.local.entities.MovieReview
+import com.example.myapplication.data.local.entities.UserProfile
 
 // --- LIST 1: DÀNH CHO TAB FOR YOU (10 items) ---
 val forYouReviews = listOf(
@@ -29,4 +30,24 @@ val followingReviews = listOf(
     MovieReview(18, "The Batman", "2022", "Vengeance", 4, 112, "Gritty, noir, and grounded. Pattinson is a fantastic, brooding Bruce Wayne.", R.drawable.the_irishman, R.drawable.the_irishman),
     MovieReview(19, "Top Gun: Maverick", "2022", "Pete Mitchell", 5, 230, "The pure adrenaline of cinema. A movie that was made for the big screen.", R.drawable.the_irishman, R.drawable.the_irishman),
     MovieReview(20, "Avatar: The Way of Water", "2022", "James C.", 4, 180, "The visuals are second to none. A beautiful underwater world that feels real.", R.drawable.the_irishman, R.drawable.the_irishman)
+)
+
+val sampleProfile = UserProfile(
+    name = "Kyran",
+    username = "@kyran_d",
+    avatarRes = R.drawable.the_irishman,
+    backgroundRes = R.drawable.the_irishman,
+    followersCount = 500,
+    friendsCount = 67,
+    followingCount = 420,
+    watchedCount = 455,
+    filmsThisYear = 33,
+    reviewsCount = 30,
+    favoriteFilms = listOf(
+        R.drawable.the_irishman,
+        R.drawable.the_irishman,
+        R.drawable.the_irishman,
+        R.drawable.the_irishman
+    ),
+    albumsCount = 4
 )

@@ -8,7 +8,7 @@ sealed class Screen(val route: String) {
     data object Home : Screen("home")
 
     data object MoviePage : Screen("movie_page/{movieId}") {
-        fun createRoute(movieId: String) = "movie_page/$movieId"
+        fun createRoute(movieId: Int) = "movie_page/$movieId"
     }
 
 }

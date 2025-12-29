@@ -16,15 +16,18 @@ data class MovieReview(
     val posterRes: Int,
     val avatarRes: Int
 )
-
-// Dữ liệu giả lập
-val forYouReviews = listOf(
-    MovieReview(1, "The Subs", "2024", "The Marquee", 4, 34, "Coralie Fargeat’s second feature is an uncompromising and wildly entertaining body horror satire...", R.drawable.the_irishman, R.drawable.the_irishman),
-    MovieReview(2, "Anora", "2024", "Sean Baker", 5, 120, "A breathtaking journey through the neon-lit streets...", R.drawable.the_irishman, R.drawable.the_irishman)
-)
-val followingReviews = listOf(
-    MovieReview(1, "The Substance", "2024", "The Marquee", 4, 34, "Coralie Fargeat’s second feature is an uncompromising and wildly entertaining body horror satire...", R.drawable.the_irishman, R.drawable.the_irishman),
-    MovieReview(2, "Anora", "2024", "Sean Baker", 5, 120, "A breathtaking journey through the neon-lit streets...", R.drawable.the_irishman, R.drawable.the_irishman)
-
-
+@Entity
+data class UserProfile(
+    val name: String,
+    val username: String,
+    val avatarRes: Int,
+    val backgroundRes: Int,
+    val followersCount: Int,
+    val followingCount: Int,
+    val friendsCount: Int,
+    val watchedCount: Int,
+    val filmsThisYear: Int,
+    val reviewsCount: Int,
+    val favoriteFilms: List<Int>,
+    val albumsCount: Int
 )
