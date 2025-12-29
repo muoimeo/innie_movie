@@ -3,6 +3,8 @@ package com.example.myapplication.data
 import com.example.myapplication.R
 import com.example.myapplication.data.local.entities.MovieReview
 import com.example.myapplication.data.local.entities.UserProfile
+import com.example.myapplication.data.local.entities.MovieItem
+
 
 // --- LIST 1: DÀNH CHO TAB FOR YOU (10 items) ---
 val forYouReviews = listOf(
@@ -50,4 +52,16 @@ val sampleProfile = UserProfile(
         R.drawable.the_irishman
     ),
     albumsCount = 4
+)
+
+val watchHistoryList = listOf(
+    MovieItem("Stranger Things", R.drawable.the_irishman),
+    MovieItem("Black Phone 2", R.drawable.the_irishman),
+    MovieItem("Predator: Badlands", R.drawable.the_irishman),
+    MovieItem("Avatar: Fire and Ash", R.drawable.the_irishman),
+    MovieItem("Frankenstein", R.drawable.the_irishman),
+    MovieItem("Five Nights at Freddy's 2", R.drawable.the_irishman),
+    MovieItem("The Conjuring: Last Rites", R.drawable.the_irishman),
+    MovieItem("Zootopia 2", R.drawable.the_irishman),
+    MovieItem("Deadpool and Wolverine", R.drawable.the_irishman)
 )

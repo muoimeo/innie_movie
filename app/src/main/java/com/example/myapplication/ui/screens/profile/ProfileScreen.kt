@@ -24,7 +24,14 @@ import androidx.navigation.NavController
 import com.example.myapplication.data.local.entities.UserProfile
 import com.example.myapplication.data.sampleProfile
 import kotlinx.coroutines.launch
-
+import com.example.myapplication.ui.navigation.Profile
+import androidx.compose.material3.DrawerState
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.CoroutineScope // If you are passing it as a parameter
 @Composable
 fun ProfileScreen(
     navController: NavController,
@@ -43,7 +50,7 @@ fun ProfileScreen(
                 drawerContainerColor = Color.White,
                 drawerShape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
             ) {
-                ProfileSideMenuContent(user)
+                ProfileSideMenuContent(user, navController, drawerState, scope)
             }
         }
     ) {
@@ -140,9 +147,9 @@ fun SocialStatsSection(user: UserProfile) {
         modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        SocialItem("500", "Followers")
-        SocialItem("67", "Friends")
-        SocialItem("420", "Followings")
+        SocialItem(user.followersCount.toString(), "Followers")
+        SocialItem(user.friendsCount.toString(), "Friends")
+        SocialItem(user.followingCount.toString(), "Followings")
     }
 }
 
@@ -177,7 +184,12 @@ fun ActivityStatItem(count: Int, label: String, color: Color) {
 }
 
 @Composable
-fun HorizontalFilmSection(title: String, posters: List<Int>, showStars: Boolean = false, showSeeAll: Boolean = false) {
+fun HorizontalFilmSection(
+    title: String,
+    posters: List<Int>,
+    showStars: Boolean = false,
+    showSeeAll: Boolean = false,
+    onSeeAllClick: () -> Unit = {}) {
     Column(modifier = Modifier.padding(top = 24.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
@@ -185,7 +197,16 @@ fun HorizontalFilmSection(title: String, posters: List<Int>, showStars: Boolean 
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(text = title, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            if (showSeeAll) Text(text = "See All", color = Color(0xFF00C02B), fontSize = 12.sp)
+            if (showSeeAll) {
+                Text(
+                    text = "See All",
+                    color = Color(0xFF00C02B),
+                    fontSize = 12.sp,
+                    modifier = Modifier.clickable { onSeeAllClick() }
+                )
+
+            }
+
         }
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -196,7 +217,8 @@ fun HorizontalFilmSection(title: String, posters: List<Int>, showStars: Boolean 
                     Image(
                         painter = painterResource(id = posterId),
                         contentDescription = null,
-                        modifier = Modifier.width(85.dp).height(125.dp).clip(RoundedCornerShape(8.dp)),
+                        modifier = Modifier.width(85.dp).height(125.dp)
+                            .clip(RoundedCornerShape(8.dp)),
                         contentScale = ContentScale.Crop
                     )
                     if (showStars) {
@@ -210,47 +232,59 @@ fun HorizontalFilmSection(title: String, posters: List<Int>, showStars: Boolean 
         }
     }
 }
-
-@Composable
-fun ProfileSideMenuContent(user: UserProfile) {
-    Column(modifier = Modifier.fillMaxHeight().padding(24.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Image(
-                painter = painterResource(id = user.avatarRes),
-                contentDescription = null,
-                modifier = Modifier.size(56.dp).clip(CircleShape),
-                contentScale = ContentScale.Crop
+    @Composable
+    fun ProfileSideMenuContent(
+        user: UserProfile,
+        navController: NavController,
+        drawerState: DrawerState,
+        scope: CoroutineScope
+    ) {
+        Column(modifier = Modifier.fillMaxHeight().padding(24.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Image(
+                    painter = painterResource(id = user.avatarRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(56.dp).clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(user.name, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    Text(user.username, color = Color.Gray, fontSize = 14.sp)
+                }
+            }
+            Spacer(modifier = Modifier.height(32.dp))
+            val menuItems = listOf(
+                Triple("Watch History", Icons.Default.Visibility, Profile.WatchHistory),
+                Triple("Albums", Icons.Default.Collections, Profile.Albums),
+                Triple("Reviews", Icons.Default.RateReview, Profile.Reviews),
+                Triple("Likes", Icons.Default.FavoriteBorder, Profile.Likes),
+                Triple("Settings", Icons.Default.Settings, Profile.Settings)
             )
-            Spacer(modifier = Modifier.width(16.dp))
-            Column {
-                Text(user.name, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                Text(user.username, color = Color.Gray, fontSize = 14.sp)
+
+            menuItems.forEach { (title, icon, destination) ->
+                NavigationDrawerItem(
+                    label = { Text(title, fontSize = 16.sp) },
+                    selected = title == "Profile",
+                    onClick = {
+                        scope.launch {
+                            drawerState.close()
+                            // Use the route defined in your sealed class
+                            navController.navigate(destination.route) {
+                                // Avoid multiple copies of the same destination on the stack
+                                launchSingleTop = true
+                            }
+                        }
+                    },
+                    icon = { Icon(icon, contentDescription = null) },
+                    colors = NavigationDrawerItemDefaults.colors(
+                        selectedContainerColor = Color(0xFF00C02B),
+                        selectedTextColor = Color.White,
+                        selectedIconColor = Color.White
+                    ),
+                    modifier = Modifier.padding(vertical = 4.dp),
+                    shape = RoundedCornerShape(10.dp)
+                )
             }
         }
-        Spacer(modifier = Modifier.height(32.dp))
-        val menuItems = listOf(
-            "Profile" to Icons.Default.Person,
-            "Watched" to Icons.Default.Visibility,
-            "Watchlist" to Icons.Default.List,
-            "Albums" to Icons.Default.Collections,
-            "Reviews" to Icons.Default.RateReview,
-            "Likes" to Icons.Default.FavoriteBorder,
-            "Settings" to Icons.Default.Settings
-        )
-        menuItems.forEach { (title, icon) ->
-            NavigationDrawerItem(
-                label = { Text(title, fontSize = 16.sp) },
-                selected = title == "Profile",
-                onClick = { },
-                icon = { Icon(icon, contentDescription = null) },
-                colors = NavigationDrawerItemDefaults.colors(
-                    selectedContainerColor = Color(0xFF00C02B),
-                    selectedTextColor = Color.White,
-                    selectedIconColor = Color.White
-                ),
-                modifier = Modifier.padding(vertical = 4.dp),
-                shape = RoundedCornerShape(10.dp)
-            )
-        }
     }
-}

@@ -24,7 +24,9 @@ import com.example.myapplication.ui.screens.community.MoviePage
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
 import androidx.navigation.NavController
-
+import com.example.myapplication.ui.navigation.Profile
+import com.example.myapplication.ui.screens.profile.ProfileScreen
+import com.example.myapplication.ui.screens.profile.WatchHistoryScreen
 class AuthViewModelFactory(
     private val repository: AuthRepository
 ) : ViewModelProvider.Factory {
@@ -119,7 +121,23 @@ class MainActivity : ComponentActivity() {
                     ) { backStackEntry ->
                         val id = backStackEntry.arguments?.getInt("movieId") ?: 0
                         MoviePage(movieId = id, navController = navController)
-                    }                }
+                    }
+                    composable(Profile.WatchHistory.route) {
+                        WatchHistoryScreen(navController = navController)
+                    }
+                    composable(Profile.Albums.route) {
+                        ProfileScreen(navController = navController)
+                    }
+                    composable(Profile.Reviews.route) {
+                        ProfileScreen(navController = navController)
+                    }
+                    composable(Profile.Likes.route) {
+                        ProfileScreen(navController = navController)
+                    }
+                    composable(Profile.Settings.route) {
+                        ProfileScreen(navController = navController)
+                    }
+                }
             }
         }
     }

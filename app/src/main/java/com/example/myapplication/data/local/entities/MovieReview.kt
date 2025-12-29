@@ -31,3 +31,8 @@ data class UserProfile(
     val favoriteFilms: List<Int>,
     val albumsCount: Int
 )
+@Entity
+data class MovieItem(
+    val title: String,
+    val posterRes: Int
+)

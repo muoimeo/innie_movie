@@ -64,4 +64,12 @@ sealed class BottomNavItem(
 
 }
 
+sealed class Profile(val route: String) {
+    data object WatchHistory : Profile("WatchHistory")
+    data object Albums : Profile("albums")
+    data object Reviews : Profile("reviews")
+    data object Likes : Profile("likes")
+    data object Settings : Profile("settings")
+}
+
 
