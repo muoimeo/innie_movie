@@ -57,7 +57,7 @@ sealed class BottomNavItem(
         val items = listOf(Home, Community, Search, Notifications, Profile)
     }
 
-    object MovieDetail : Screen("movie_detail/{movieId}") {
+    object MoviePage : Screen("movie_detail/{movieId}") {
         fun createRoute(movieId: Int) = "movie_detail/$movieId"
     }
 

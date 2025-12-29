@@ -8,6 +8,14 @@ sealed class Screen(val route: String) {
     data object Home : Screen("home")
 
     data object WatchHistory : Screen("WatchHistory")
+    data object Albums : Screen("albums")
+
+    data object Reviews : Screen("reviews")
+
+    data object Likes : Screen("likes")
+
+    data object Settings : Screen("settings")
+
     data object MoviePage : Screen("movie_page/{movieId}") {
         fun createRoute(movieId: Int) = "movie_page/$movieId"
     }
