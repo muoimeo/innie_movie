@@ -79,6 +79,7 @@ fun HomeScreen(
             BottomNavItem.Home.route -> {
                 HomeContent(
                     username = username,
+                    navController = navController,
                     modifier = Modifier.padding(paddingValues)
                 )
             }
@@ -100,6 +101,7 @@ fun HomeScreen(
 @Composable
 fun HomeContent(
     username: String,
+    navController: NavController? = null,
     modifier: Modifier = Modifier
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
@@ -160,7 +162,11 @@ fun HomeContent(
                 when (tabs[selectedTab]) {
                     HomeTopTab.HOME -> HomeFeed(
                         username = username,
-                        onMovieClick = { /* TODO */ },
+                        onMovieClick = { movieId ->
+                            navController?.navigate(
+                                com.example.myapplication.ui.navigation.Screen.MoviePage.createRoute(movieId)
+                            )
+                        },
                         onAlbumClick = { /* TODO */ },
                         onReviewClick = { /* TODO */ },
                         onProfileClick = { /* TODO */ }

@@ -2,25 +2,108 @@ package com.example.myapplication.ui.screens.community
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.myapplication.R
 import com.example.myapplication.ui.theme.InnieGreen
+
+// Data classes for movie details
+data class MovieDetail(
+    val id: String,
+    val title: String,
+    val year: String,
+    val director: String,
+    val duration: String,
+    val synopsis: String,
+    val description: String,
+    val posterRes: Int,
+    val backdropRes: Int,
+    val rating: Float,
+    val ratingDistribution: List<Int>,
+    val casts: List<CastMember>,
+    val crews: List<CrewMember>,
+    val reviews: List<MovieReview>
+)
+
+data class CastMember(
+    val name: String,
+    val character: String,
+    val photoRes: Int
+)
+
+data class CrewMember(
+    val name: String,
+    val role: String,
+    val photoRes: Int
+)
+
+data class MovieReview(
+    val id: String,
+    val authorName: String,
+    val authorPhotoRes: Int,
+    val rating: Float,
+    val maxRating: Int,
+    val reviewText: String
+)
+
+// Sample movie data
+val sampleMovie = MovieDetail(
+    id = "1",
+    title = "The Batman",
+    year = "2022",
+    director = "Matt Reeves",
+    duration = "176 mins",
+    synopsis = "UNMASK THE TRUTH.",
+    description = "In his second year of fighting crime, Batman uncovers corruption in Gotham City that connects to his own family while facing a serial killer known as the Riddler.",
+    posterRes = R.drawable.onboarding_bg,
+    backdropRes = R.drawable.onboarding_bg,
+    rating = 4.4f,
+    ratingDistribution = listOf(9, 15, 30, 38, 46, 57),
+    casts = listOf(
+        CastMember("Robert Pattinson", "Bruce Wayne", R.drawable.onboarding_bg),
+        CastMember("Zoë Kravitz", "Selina Kyle", R.drawable.onboarding_bg),
+        CastMember("Paul Dano", "The Riddler", R.drawable.onboarding_bg),
+        CastMember("Jeffrey Wright", "James Gordon", R.drawable.onboarding_bg),
+        CastMember("Colin Farrell", "Oz", R.drawable.onboarding_bg)
+    ),
+    crews = listOf(
+        CrewMember("Matt Reeves", "Director", R.drawable.onboarding_bg),
+        CrewMember("Dylan Clark", "Producer", R.drawable.onboarding_bg)
+    ),
+    reviews = listOf(
+        MovieReview(
+            "1", "David", R.drawable.onboarding_bg, 3.5f, 5,
+            "It was less than three years ago that Todd Phillips' mid-budget but mega-successful \"Joker\" threateningly pointed toward a future in which superhero movies of all sizes would become so endemic to modern cinema. With Matt Reeves' \"The Batman\" — a sprawling, 176-minute latex procedural that often appears to have more in common with serial killer sagas like \"Se7en\" and \"Zodiac\" than it does anything in the Snyderverse or the MCU."
+        ),
+        MovieReview(
+            "2", "Mason", R.drawable.onboarding_bg, 4.5f, 10,
+            "Believe the hype. The Batman is a gritty noir detective story, which immediately sets it apart from the previous iterations. The grime and desolation of Gotham oozes out of each scene through its immaculate cinematography and injected into your veins through Giacchino's brilliant score."
+        )
+    )
+)
 
 @Composable
 fun MoviePage(
@@ -28,152 +111,561 @@ fun MoviePage(
     navController: NavController
 ) {
     val scrollState = rememberScrollState()
-    val mainGreen = InnieGreen
+    var selectedTab by remember { mutableIntStateOf(0) }
+    
+    val movie = sampleMovie
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFF8F8F8))) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF8F9FA))
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
         ) {
-            // --- PHẦN 1: HEADER BANNER (ẢNH NỀN CONG) ---
-            Box(modifier = Modifier.fillMaxWidth().height(280.dp)) {
+            // === BACKDROP with early curve ===
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+            ) {
+                // Backdrop - curves early from middle-right
                 Image(
-                    painter = painterResource(id = movieId),
+                    painter = painterResource(id = movie.backdropRes),
                     contentDescription = null,
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(260.dp)
-                        .clip(RoundedCornerShape(bottomEnd = 160.dp)), // Tạo đường cong góc dưới
+                        .fillMaxSize()
+                        .clip(
+                            RoundedCornerShape(
+                                bottomStart = 0.dp,
+                                bottomEnd = 160.dp // Large curve starting early
+                            )
+                        ),
                     contentScale = ContentScale.Crop
                 )
+                
+                // Gradient overlay
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clip(
+                            RoundedCornerShape(
+                                bottomStart = 0.dp,
+                                bottomEnd = 160.dp
+                            )
+                        )
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Black.copy(alpha = 0.2f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
 
-                // Nút Back
+                // Back button - small
                 IconButton(
                     onClick = { navController.popBackStack() },
                     modifier = Modifier
-                        .padding(16.dp)
-                        .align(Alignment.TopStart)
-                        .background(Color.White, CircleShape)
-                        .size(36.dp)
+                        .padding(start = 16.dp, top = 40.dp)
+                        .size(28.dp)
+                        .background(Color(0xFFF8F9FA), CircleShape)
                 ) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Back",
+                        modifier = Modifier.size(14.dp),
+                        tint = Color(0xFF1A202C)
+                    )
                 }
             }
 
-            // --- PHẦN 2: THÔNG TIN CHÍNH (POSTER ĐÈ & TIÊU ĐỀ) ---
+            // === POSTER + MOVIE INFO ROW (aligned side by side) ===
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp)
-                    .offset(y = (-80).dp), // Đẩy phần này lên trên ảnh nền
-                verticalAlignment = Alignment.Bottom
+                    .offset(y = (-70).dp), // Pull up to overlap backdrop
+                verticalAlignment = Alignment.Top
             ) {
-                // Poster nhỏ
+                // Poster
                 Card(
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.width(130.dp).height(190.dp),
+                    modifier = Modifier
+                        .width(116.dp)
+                        .height(166.dp),
+                    shape = RoundedCornerShape(8.dp),
                     elevation = CardDefaults.cardElevation(8.dp)
                 ) {
                     Image(
-                        painter = painterResource(id = movieId),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
+                        painter = painterResource(id = movie.posterRes),
+                        contentDescription = movie.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
                     )
                 }
-
+                
                 Spacer(modifier = Modifier.width(16.dp))
-
-                // Text thông tin
-                Column(modifier = Modifier.padding(bottom = 10.dp)) {
-                    Text(
-                        text = "The Batman",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = "2022", color = Color.Gray, fontSize = 14.sp)
-                        Text(text = "  •  ", color = Color.Gray)
-                        Text(text = "176 mins", color = Color.Gray, fontSize = 14.sp)
+                
+                // Movie info - aligned with poster height
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(166.dp), // Same height as poster
+                    verticalArrangement = Arrangement.Bottom // Changed to Bottom to avoid overlap
+                ) {
+                    // Title + Year row
+                    Row(
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        Text(
+                            text = movie.title,
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF1A202C)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = movie.year,
+                            fontSize = 11.sp,
+                            color = Color(0xFF1A202C),
+                            modifier = Modifier.padding(bottom = 2.dp)
+                        )
                     }
-                    Text(text = "Directed by Matt Reeves", fontSize = 13.sp, color = Color.Black)
+                    
+                    Spacer(modifier = Modifier.height(4.dp))
+                    
+                    // Directed by
+                    Row {
+                        Text(
+                            text = "Directed by ",
+                            fontSize = 11.sp,
+                            color = Color(0xFF1A202C)
+                        )
+                        Text(
+                            text = movie.director,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF1A202C)
+                        )
+                    }
+                    
+                    Spacer(modifier = Modifier.height(2.dp))
+                    
+                    // Duration - under Directed by
+                    Text(
+                        text = movie.duration,
+                        fontSize = 11.sp,
+                        color = Color(0xFF1A202C)
+                    )
                 }
             }
 
-            // --- PHẦN 3: STATS & ACTION BUTTONS ---
+            // === SYNOPSIS & DESCRIPTION (below poster row) ===
             Column(
                 modifier = Modifier
+                    .fillMaxWidth()
                     .padding(horizontal = 20.dp)
-                    .offset(y = (-40).dp)
+                    .offset(y = (-50).dp)
             ) {
-                // Stats (Watch, Heart, List)
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-                    horizontalArrangement = Arrangement.spacedBy(25.dp)
-                ) {
-                    StatItem(Icons.Default.Visibility, "40k")
-                    StatItem(Icons.Default.Favorite, "30k", Color.Red)
-                    StatItem(Icons.Default.List, "12k", Color(0xFF2196F3))
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Nút bấm xanh
-                ActionButton(text = "Rate or Review", icon = Icons.Default.Edit, color = mainGreen)
-                ActionButton(text = "Add to Albums", icon = Icons.Default.List, color = mainGreen)
-                ActionButton(text = "Add to Watchlist", icon = Icons.Default.Add, color = mainGreen)
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Synopsis
-                Text(text = "UNMASK THE TRUTH.", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                 Text(
-                    text = "In his second year of fighting crime, Batman uncovers corruption in Gotham City that connects to his own family...",
+                    text = movie.synopsis,
                     fontSize = 13.sp,
-                    color = Color.Gray,
-                    modifier = Modifier.padding(top = 8.dp)
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1A202C)
                 )
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                Text(
+                    text = movie.description,
+                    fontSize = 12.sp,
+                    color = Color(0xFF1A202C),
+                    textAlign = TextAlign.Justify,
+                    lineHeight = 18.sp
+                )
+            }
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Casts
-                Text(text = "Casts", fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Row(
-                    modifier = Modifier.padding(top = 12.dp).fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(15.dp)
+            // === ACTION BUTTONS + RATINGS ===
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp)
+                    .offset(y = (-30).dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                // Left: Action buttons
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    repeat(5) { // Mô phỏng các diễn viên
-                        Box(modifier = Modifier.size(55.dp).clip(CircleShape).background(Color.LightGray))
+                    ActionButtonSmall(
+                        text = "Rate or Review",
+                        icon = Icons.Outlined.Edit,
+                        onClick = { }
+                    )
+                    ActionButtonSmall(
+                        text = "Add to Albums",
+                        icon = Icons.Default.List,
+                        onClick = { }
+                    )
+                    ActionButtonSmall(
+                        text = "Add to Watchlist",
+                        icon = Icons.Outlined.BookmarkBorder,
+                        onClick = { }
+                    )
+                }
+                
+                Spacer(modifier = Modifier.width(20.dp))
+                
+                // Right: Ratings section
+                Column(
+                    modifier = Modifier.weight(1f),
+                    horizontalAlignment = Alignment.Start
+                ) {
+                    Text(
+                        text = "Ratings",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF1A202C)
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    Row(
+                        verticalAlignment = Alignment.Bottom,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        // Rating bars
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            verticalAlignment = Alignment.Bottom,
+                            modifier = Modifier.height(60.dp)
+                        ) {
+                            movie.ratingDistribution.forEach { height ->
+                                Box(
+                                    modifier = Modifier
+                                        .width(12.dp)
+                                        .height(height.dp)
+                                        .background(
+                                            Color(0xFFB3B3B3).copy(alpha = 0.5f),
+                                            RoundedCornerShape(2.dp)
+                                        )
+                                )
+                            }
+                        }
+                        
+                        // Rating score + stars
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                text = movie.rating.toString(),
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = InnieGreen
+                            )
+                            Row {
+                                repeat(5) { index ->
+                                    Icon(
+                                        imageVector = if (index < movie.rating.toInt()) 
+                                            Icons.Filled.Star 
+                                        else 
+                                            Icons.Outlined.StarOutline,
+                                        contentDescription = null,
+                                        tint = Color(0xFFEC2626),
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(40.dp))
             }
+
+            // === CAST/CREW TABS ===
+            Row(
+                modifier = Modifier
+                    .padding(start = 20.dp, top = 8.dp)
+                    .offset(y = (-20).dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                // Casts tab
+                Box(
+                    modifier = Modifier
+                        .background(
+                            if (selectedTab == 0) InnieGreen else Color.Transparent,
+                            RoundedCornerShape(12.dp)
+                        )
+                        .clickable { selectedTab = 0 }
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "Casts",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (selectedTab == 0) Color.White else Color(0xFF1A202C)
+                    )
+                }
+                
+                // Crews tab
+                Box(
+                    modifier = Modifier
+                        .background(
+                            if (selectedTab == 1) InnieGreen else Color.Transparent,
+                            RoundedCornerShape(12.dp)
+                        )
+                        .clickable { selectedTab = 1 }
+                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = "Crews",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (selectedTab == 1) Color.White else Color(0xFF1A202C)
+                    )
+                }
+            }
+
+            // Cast/Crew avatars
+            LazyRow(
+                modifier = Modifier
+                    .padding(top = 8.dp)
+                    .offset(y = (-20).dp),
+                contentPadding = PaddingValues(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                val count = if (selectedTab == 0) movie.casts.size else movie.crews.size
+                items(count) { index ->
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(50.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFC4C4C4))
+                        ) {
+                            Image(
+                                painter = painterResource(
+                                    id = if (selectedTab == 0) 
+                                        movie.casts[index].photoRes 
+                                    else 
+                                        movie.crews[index].photoRes
+                                ),
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (selectedTab == 0) 
+                                movie.casts[index].name.split(" ").first()
+                            else 
+                                movie.crews[index].name.split(" ").first(),
+                            fontSize = 10.sp,
+                            color = Color(0xFF1A202C),
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+
+            // Divider
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp)
+                    .offset(y = (-20).dp)
+                    .height(1.dp)
+                    .background(Color(0xFFE0E0E0))
+            )
+
+            // === POPULAR REVIEWS SECTION ===
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
+                    .offset(y = (-12).dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Popular Reviews",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1A202C)
+                )
+            }
+
+            // Reviews list
+            Column(
+                modifier = Modifier
+                    .offset(y = (-12).dp)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                movie.reviews.forEach { review ->
+                    ReviewCard(review = review)
+                }
+                
+                // See All button centered at bottom
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "See All",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = InnieGreen,
+                        modifier = Modifier.clickable { }
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }
 
 @Composable
-fun StatItem(icon: androidx.compose.ui.graphics.vector.ImageVector, value: String, tint: Color = Color.Gray) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
-        Text(text = value, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+fun ActionButtonSmall(
+    text: String,
+    icon: ImageVector,
+    onClick: () -> Unit
+) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(36.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = InnieGreen),
+        shape = RoundedCornerShape(8.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(14.dp),
+            tint = Color.White
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = text,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White
+        )
     }
 }
 
 @Composable
-fun ActionButton(text: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color) {
-    Button(
-        onClick = { },
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).height(45.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = color),
-        shape = RoundedCornerShape(8.dp)
+fun ReviewCard(review: MovieReview) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)),
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(text = text, fontWeight = FontWeight.Bold)
+        Column(
+            modifier = Modifier.padding(14.dp)
+        ) {
+            // Author row
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Author avatar
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF7D3131))
+                ) {
+                    Image(
+                        painter = painterResource(id = review.authorPhotoRes),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+                
+                Spacer(modifier = Modifier.width(10.dp))
+                
+                Column {
+                    // Author name
+                    Row {
+                        Text(
+                            text = "Review by ",
+                            fontSize = 12.sp,
+                            color = Color(0xFF888888)
+                        )
+                        Text(
+                            text = review.authorName,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = InnieGreen
+                        )
+                    }
+                    
+                    // Rating stars
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        repeat(review.rating.toInt()) {
+                            Icon(
+                                imageVector = Icons.Filled.Star,
+                                contentDescription = null,
+                                tint = Color(0xFFEC2626),
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                        if (review.rating % 1 >= 0.5f) {
+                            Icon(
+                                imageVector = Icons.Filled.Star,
+                                contentDescription = null,
+                                tint = Color(0xFFEC2626).copy(alpha = 0.5f),
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "/${review.maxRating}",
+                            fontSize = 11.sp,
+                            color = Color(0xFF888888)
+                        )
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            // Review text
+            Text(
+                text = review.reviewText,
+                fontSize = 13.sp,
+                color = Color(0xFF1A202C),
+                lineHeight = 20.sp,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis
+            )
+            
+            Spacer(modifier = Modifier.height(10.dp))
+            
+            // Read more
+            Text(
+                text = "Read more",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF9C4A8B),
+                modifier = Modifier.clickable { }
+            )
         }
     }
 }

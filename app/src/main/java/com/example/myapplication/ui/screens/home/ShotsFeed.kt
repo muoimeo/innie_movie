@@ -27,7 +27,9 @@ import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material.icons.outlined.Movie
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -131,14 +133,20 @@ val fakeShotsVideos = listOf(
 
 @Composable
 fun ShotsFeed() {
-    val pagerState = rememberPagerState(pageCount = { fakeShotsVideos.size })
+    // Infinite loop: use very large page count and start in the middle
+    val pagerState = rememberPagerState(
+        initialPage = Int.MAX_VALUE / 2,
+        pageCount = { Int.MAX_VALUE }
+    )
     
     VerticalPager(
         state = pagerState,
         modifier = Modifier.fillMaxSize()
     ) { page ->
+        // Use modulo to cycle through the actual videos
+        val actualIndex = page % fakeShotsVideos.size
         ShotVideoItem(
-            video = fakeShotsVideos[page]
+            video = fakeShotsVideos[actualIndex]
         )
     }
 }
@@ -208,42 +216,44 @@ fun ShotVideoItem(
             )
         }
         
-        // Bottom content: Title + Progress bar
-        Column(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 12.dp, end = 70.dp, bottom = 70.dp)
-        ) {
-            // Title with "... more" button
-            Row(
-                verticalAlignment = Alignment.Bottom
+        // Bottom content: Title + Progress bar (hidden when overlay is shown)
+        if (!showMoreInfo) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 12.dp, end = 70.dp, bottom = 70.dp)
             ) {
-                Text(
-                    text = video.title,
-                    color = Color.White,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "... more",
-                    color = Color(0xFFB3B3B3),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.clickable { showMoreInfo = true }
+                // Title with "... more" button
+                Row(
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    Text(
+                        text = video.title,
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "... more",
+                        color = Color(0xFFB3B3B3),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { showMoreInfo = true }
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                // Progress bar
+                VideoProgressBar(
+                    progress = video.progress,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
-            
-            Spacer(modifier = Modifier.height(16.dp))
-            
-            // Progress bar
-            VideoProgressBar(
-                progress = video.progress,
-                modifier = Modifier.fillMaxWidth()
-            )
         }
         
         // "More Info" overlay
@@ -361,7 +371,7 @@ fun MoreInfoOverlay(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Movie,
+                    imageVector = Icons.Outlined.Info,
                     contentDescription = "Related content",
                     tint = Color.White,
                     modifier = Modifier.size(20.dp)
@@ -431,13 +441,17 @@ fun MoreInfoOverlay(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 repeat(5) { index ->
-                                    Box(
-                                        modifier = Modifier
-                                            .size(9.dp)
-                                            .background(
-                                                if (index < movie.rating.toInt()) InnieGreen 
-                                                else Color.White.copy(alpha = 0.3f)
-                                            )
+                                    Icon(
+                                        imageVector = if (index < movie.rating.toInt()) 
+                                            Icons.Filled.Star 
+                                        else 
+                                            Icons.Outlined.StarOutline,
+                                        contentDescription = null,
+                                        tint = if (index < movie.rating.toInt()) 
+                                            InnieGreen 
+                                        else 
+                                            Color.White.copy(alpha = 0.3f),
+                                        modifier = Modifier.size(14.dp)
                                     )
                                     Spacer(modifier = Modifier.width(1.dp))
                                 }

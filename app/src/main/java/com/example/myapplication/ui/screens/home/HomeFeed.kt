@@ -108,7 +108,7 @@ val fakeReviews = listOf(
 @Composable
 fun HomeFeed(
     username: String,
-    onMovieClick: (String) -> Unit,
+    onMovieClick: (Int) -> Unit, // Changed to Int for posterRes
     onAlbumClick: (String) -> Unit,
     onReviewClick: (String) -> Unit,
     onProfileClick: (String) -> Unit
@@ -163,7 +163,7 @@ fun HomeFeed(
                 items(fakeMovies) { movie ->
                     MoviePosterCard(
                         movie = movie,
-                        onClick = { onMovieClick(movie.id) }
+                        onClick = { onMovieClick(movie.posterRes) } // Pass posterRes for MoviePage
                     )
                 }
             }
