@@ -26,8 +26,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.myapplication.R
+import com.example.myapplication.data.local.entities.Movie
 import com.example.myapplication.ui.theme.InnieGreen
 
 // Data classes for movie details
@@ -108,12 +111,32 @@ val sampleMovie = MovieDetail(
 @Composable
 fun MoviePage(
     movieId: Int,
-    navController: NavController
+    navController: NavController,
+    viewModel: MoviePageViewModel = viewModel()
 ) {
     val scrollState = rememberScrollState()
     var selectedTab by remember { mutableIntStateOf(0) }
     
-    val movie = sampleMovie
+    // Load movie from database
+    val movieFromDb by viewModel.movie.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    
+    LaunchedEffect(movieId) {
+        viewModel.loadMovie(movieId)
+    }
+    
+    // Show loading or empty state
+    if (isLoading || movieFromDb == null) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(color = InnieGreen)
+        }
+        return
+    }
+    
+    val movie = movieFromDb!!
 
     Box(
         modifier = Modifier
@@ -131,16 +154,16 @@ fun MoviePage(
                     .fillMaxWidth()
                     .height(220.dp)
             ) {
-                // Backdrop - curves early from middle-right
-                Image(
-                    painter = painterResource(id = movie.backdropRes),
+                // Backdrop - use Coil AsyncImage for URL
+                AsyncImage(
+                    model = movie.backdropUrl,
                     contentDescription = null,
                     modifier = Modifier
                         .fillMaxSize()
                         .clip(
                             RoundedCornerShape(
                                 bottomStart = 0.dp,
-                                bottomEnd = 160.dp // Large curve starting early
+                                bottomEnd = 160.dp
                             )
                         ),
                     contentScale = ContentScale.Crop
@@ -191,7 +214,7 @@ fun MoviePage(
                     .offset(y = (-70).dp), // Pull up to overlap backdrop
                 verticalAlignment = Alignment.Top
             ) {
-                // Poster
+                // Poster - use Coil AsyncImage
                 Card(
                     modifier = Modifier
                         .width(116.dp)
@@ -199,8 +222,8 @@ fun MoviePage(
                     shape = RoundedCornerShape(8.dp),
                     elevation = CardDefaults.cardElevation(8.dp)
                 ) {
-                    Image(
-                        painter = painterResource(id = movie.posterRes),
+                    AsyncImage(
+                        model = movie.posterUrl,
                         contentDescription = movie.title,
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
@@ -228,7 +251,7 @@ fun MoviePage(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = movie.year,
+                            text = movie.year?.toString() ?: "",
                             fontSize = 11.sp,
                             color = Color(0xFF1A202C),
                             modifier = Modifier.padding(bottom = 2.dp)
@@ -245,7 +268,7 @@ fun MoviePage(
                             color = Color(0xFF1A202C)
                         )
                         Text(
-                            text = movie.director,
+                            text = movie.director ?: "Unknown",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF1A202C)
@@ -254,9 +277,16 @@ fun MoviePage(
                     
                     Spacer(modifier = Modifier.height(2.dp))
                     
-                    // Duration - under Directed by
+                    // Duration - formatted from runtimeMinutes
+                    val hours = (movie.runtimeMinutes ?: 0) / 60
+                    val mins = (movie.runtimeMinutes ?: 0) % 60
+                    val durationText = if (movie.mediaType == "series") {
+                        "${movie.seasonCount ?: 0} Seasons • ${movie.episodeCount ?: 0} Episodes"
+                    } else {
+                        "${hours}h ${mins}min"
+                    }
                     Text(
-                        text = movie.duration,
+                        text = durationText,
                         fontSize = 11.sp,
                         color = Color(0xFF1A202C)
                     )
@@ -271,7 +301,7 @@ fun MoviePage(
                     .offset(y = (-50).dp)
             ) {
                 Text(
-                    text = movie.synopsis,
+                    text = movie.synopsis ?: "",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF1A202C)
@@ -280,7 +310,7 @@ fun MoviePage(
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 Text(
-                    text = movie.description,
+                    text = movie.overview ?: "",
                     fontSize = 12.sp,
                     color = Color(0xFF1A202C),
                     textAlign = TextAlign.Justify,
@@ -339,13 +369,20 @@ fun MoviePage(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        // Rating bars
+                        // Rating bars - generate distribution based on rating
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(3.dp),
                             verticalAlignment = Alignment.Bottom,
                             modifier = Modifier.height(60.dp)
                         ) {
-                            movie.ratingDistribution.forEach { height ->
+                            // Generate fake distribution centered around the rating
+                            val ratingInt = (movie.rating * 2).toInt().coerceIn(1, 10) // 0.5-5 -> 1-10
+                            val fakeDistribution = listOf(8, 15, 25, 35, 50, 45, 30, 20, 12, 6)
+                                .mapIndexed { index, base ->
+                                    val distance = kotlin.math.abs(index - ratingInt + 1)
+                                    (base - distance * 5).coerceIn(5, 55)
+                                }
+                            fakeDistribution.forEach { height ->
                                 Box(
                                     modifier = Modifier
                                         .width(12.dp)
@@ -431,7 +468,10 @@ fun MoviePage(
                 }
             }
 
-            // Cast/Crew avatars
+            // Cast/Crew avatars - using sampleMovie for fake cast/crew data
+            val casts = sampleMovie.casts
+            val crews = sampleMovie.crews
+            
             LazyRow(
                 modifier = Modifier
                     .padding(top = 8.dp)
@@ -439,8 +479,8 @@ fun MoviePage(
                 contentPadding = PaddingValues(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                val count = if (selectedTab == 0) movie.casts.size else movie.crews.size
-                items(count) { index ->
+                val currentList = if (selectedTab == 0) casts else crews
+                items(currentList.size) { index ->
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
@@ -453,9 +493,9 @@ fun MoviePage(
                             Image(
                                 painter = painterResource(
                                     id = if (selectedTab == 0) 
-                                        movie.casts[index].photoRes 
+                                        casts[index].photoRes 
                                     else 
-                                        movie.crews[index].photoRes
+                                        crews[index].photoRes
                                 ),
                                 contentDescription = null,
                                 modifier = Modifier.fillMaxSize(),
@@ -465,9 +505,9 @@ fun MoviePage(
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = if (selectedTab == 0) 
-                                movie.casts[index].name.split(" ").first()
+                                casts[index].name.split(" ").first()
                             else 
-                                movie.crews[index].name.split(" ").first(),
+                                crews[index].name.split(" ").first(),
                             fontSize = 10.sp,
                             color = Color(0xFF1A202C),
                             maxLines = 1
@@ -502,14 +542,14 @@ fun MoviePage(
                 )
             }
 
-            // Reviews list
+            // Reviews list - using sampleMovie for fake reviews
             Column(
                 modifier = Modifier
                     .offset(y = (-12).dp)
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                movie.reviews.forEach { review ->
+                sampleMovie.reviews.forEach { review ->
                     ReviewCard(review = review)
                 }
                 

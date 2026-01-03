@@ -49,6 +49,8 @@ import com.example.myapplication.ui.screens.profile.ProfileScreen
 import com.example.myapplication.ui.screens.search.SearchScreen
 import com.example.myapplication.ui.theme.InnieGreen
 import androidx.navigation.NavController
+import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 enum class HomeTopTab(val title: String) {
     HOME("Home"),
@@ -102,12 +104,16 @@ fun HomeScreen(
 fun HomeContent(
     username: String,
     navController: NavController? = null,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    homeViewModel: HomeViewModel = viewModel()
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = HomeTopTab.entries
     val isNewsTab = tabs[selectedTab] == HomeTopTab.NEWS
     val isShotsTab = tabs[selectedTab] == HomeTopTab.SHOTS
+    
+    // Collect movies from ViewModel
+    val movies by homeViewModel.movies.collectAsState()
 
     when {
         isNewsTab -> {
@@ -162,6 +168,7 @@ fun HomeContent(
                 when (tabs[selectedTab]) {
                     HomeTopTab.HOME -> HomeFeed(
                         username = username,
+                        movies = movies,
                         onMovieClick = { movieId ->
                             navController?.navigate(
                                 com.example.myapplication.ui.navigation.Screen.MoviePage.createRoute(movieId)

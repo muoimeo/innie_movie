@@ -42,7 +42,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.myapplication.R
+import com.example.myapplication.data.local.entities.Movie
 import com.example.myapplication.ui.theme.InnieGreen
 
 // Fake data models
@@ -108,7 +110,8 @@ val fakeReviews = listOf(
 @Composable
 fun HomeFeed(
     username: String,
-    onMovieClick: (Int) -> Unit, // Changed to Int for posterRes
+    movies: List<Movie> = emptyList(), // Movies from database
+    onMovieClick: (Int) -> Unit,
     onAlbumClick: (String) -> Unit,
     onReviewClick: (String) -> Unit,
     onProfileClick: (String) -> Unit
@@ -160,11 +163,21 @@ fun HomeFeed(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(fakeMovies) { movie ->
-                    MoviePosterCard(
-                        movie = movie,
-                        onClick = { onMovieClick(movie.posterRes) } // Pass posterRes for MoviePage
-                    )
+                // Use database movies if available, fallback to fakeMovies
+                if (movies.isNotEmpty()) {
+                    items(movies.take(10)) { movie ->
+                        MoviePosterCardDb(
+                            movie = movie,
+                            onClick = { onMovieClick(movie.id) }
+                        )
+                    }
+                } else {
+                    items(fakeMovies) { movie ->
+                        MoviePosterCard(
+                            movie = movie,
+                            onClick = { onMovieClick(movie.posterRes) }
+                        )
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
@@ -229,6 +242,29 @@ fun MoviePosterCard(
             .clip(RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
     )
+}
+
+// New composable for database movies with Coil
+@Composable
+fun MoviePosterCardDb(
+    movie: Movie,
+    onClick: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .width(100.dp)
+            .height(150.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.LightGray)
+            .clickable(onClick = onClick)
+    ) {
+        AsyncImage(
+            model = movie.posterUrl,
+            contentDescription = movie.title,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize()
+        )
+    }
 }
 
 @Composable
