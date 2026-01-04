@@ -47,7 +47,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.myapplication.R
+import com.example.myapplication.data.local.entities.Album
 import com.example.myapplication.ui.theme.InnieGreen
 
 data class FakeAlbumDetail(
@@ -94,7 +96,8 @@ val featuredAlbums = listOf(
 
 @Composable
 fun AlbumFeed(
-    onAlbumClick: (String) -> Unit,
+    albums: List<Album> = emptyList(), // Albums from database
+    onAlbumClick: (Int) -> Unit, // Changed to Int for album ID
     onSearchClick: () -> Unit = {},
     onFilterClick: () -> Unit = {}
 ) {
@@ -212,11 +215,21 @@ fun AlbumFeed(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.fillMaxSize()
         ) {
-            items(featuredAlbums) { album ->
-                AlbumGridCard(
-                    album = album,
-                    onClick = { onAlbumClick(album.id) }
-                )
+            // Use database albums if available, fallback to fake
+            if (albums.isNotEmpty()) {
+                items(albums) { album ->
+                    AlbumGridCardDb(
+                        album = album,
+                        onClick = { onAlbumClick(album.id) }
+                    )
+                }
+            } else {
+                items(featuredAlbums) { album ->
+                    AlbumGridCard(
+                        album = album,
+                        onClick = { /* Legacy fake data */ }
+                    )
+                }
             }
         }
     }
@@ -320,6 +333,112 @@ fun AlbumGridCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             // View list link
+            Text(
+                text = "View album >",
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = InnieGreen,
+                    fontWeight = FontWeight.Medium
+                )
+            )
+        }
+    }
+}
+
+// New composable for database albums with Coil
+@Composable
+fun AlbumGridCardDb(
+    album: Album,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        shape = RoundedCornerShape(12.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(8.dp)
+        ) {
+            // Album cover with Coil
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(120.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.LightGray)
+            ) {
+                AsyncImage(
+                    model = album.coverUrl,
+                    contentDescription = album.title,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+                // Movie count badge
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(4.dp)
+                        .background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(4.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "${album.movieCount} films",
+                        color = Color.White,
+                        fontSize = 10.sp
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Title
+            Text(
+                text = album.title,
+                style = MaterialTheme.typography.bodyMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                ),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Author info (replaced Public badge)
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "by ",
+                    style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray),
+                    fontSize = 10.sp
+                )
+                Text(
+                    text = album.ownerId,
+                    style = MaterialTheme.typography.bodySmall.copy(
+                        color = InnieGreen,
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    fontSize = 10.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Description
+            Text(
+                text = album.description ?: "No description",
+                style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray),
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 14.sp
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // View album link
             Text(
                 text = "View album >",
                 style = MaterialTheme.typography.bodySmall.copy(

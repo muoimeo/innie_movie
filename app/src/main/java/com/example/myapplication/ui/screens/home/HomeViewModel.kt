@@ -20,7 +20,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     companion object {
         // Set to true during development when you change sample_movies.kt URLs
         // Set to false for production or when you don't want to clear data
-        const val FORCE_RESEED_FOR_DEV = true
+        const val FORCE_RESEED_FOR_DEV = false
     }
     
     private val database = DatabaseProvider.getDatabase(application)

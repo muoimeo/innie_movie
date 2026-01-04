@@ -122,6 +122,17 @@ class MainActivity : ComponentActivity() {
                         val id = backStackEntry.arguments?.getInt("movieId") ?: 0
                         MoviePage(movieId = id, navController = navController)
                     }
+                    
+                    composable(
+                        route = Screen.AlbumDetail.route,
+                        arguments = listOf(navArgument("albumId") { type = NavType.IntType })
+                    ) { backStackEntry ->
+                        val albumId = backStackEntry.arguments?.getInt("albumId") ?: 0
+                        com.example.myapplication.ui.screens.community.AlbumDetailScreen(
+                            albumId = albumId,
+                            navController = navController
+                        )
+                    }
                     composable(Profile.WatchHistory.route) {
                         WatchHistoryScreen(navController = navController)
                     }

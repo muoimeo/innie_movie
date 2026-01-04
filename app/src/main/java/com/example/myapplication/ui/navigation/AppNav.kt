@@ -20,4 +20,7 @@ sealed class Screen(val route: String) {
         fun createRoute(movieId: Int) = "movie_page/$movieId"
     }
 
+    data object AlbumDetail : Screen("album_detail/{albumId}") {
+        fun createRoute(albumId: Int) = "album_detail/$albumId"
+    }
 }

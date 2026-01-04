@@ -67,15 +67,27 @@ class AlbumRepository(private val albumDao: AlbumDao) {
      * Seeds the database with sample albums if empty.
      */
     suspend fun seedDatabaseIfEmpty() {
-        val albums = albumDao.getAllAlbums()
-        // We can't easily check Flow count here, so we'll seed based on first album
+        // We check if we need to seed
+        var needToSeed = false
+        
         val firstAlbum = albumDao.getAlbumById(1)
         if (firstAlbum == null) {
+            needToSeed = true
+            // Insert albums if missing
             sampleAlbums.forEach { album ->
                 albumDao.insertAlbum(album)
             }
-            
-            // Add some movies to albums
+        } else {
+            // Album exists, but check if connections are missing (e.g. after Movie reseed)
+            val count = albumDao.getMovieCountInAlbum(1)
+            if (count == 0) {
+                // Connections likely lost, re-seed them
+                needToSeed = true
+            }
+        }
+        
+        if (needToSeed) {
+            // Add movies to albums (Idempotent if using OnConflictStrategy.REPLACE or careful logic)
             // Album 1: Must-Watch - add movies 1,2,3,4,5,6,7,8,9,10
             listOf(1,2,3,4,5,6,7,8,9,10).forEachIndexed { index, movieId ->
                 albumDao.addMovieToAlbum(AlbumMovie(1, movieId, index))

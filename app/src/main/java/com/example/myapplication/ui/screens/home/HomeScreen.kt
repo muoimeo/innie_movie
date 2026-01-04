@@ -28,6 +28,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -105,15 +106,19 @@ fun HomeContent(
     username: String,
     navController: NavController? = null,
     modifier: Modifier = Modifier,
-    homeViewModel: HomeViewModel = viewModel()
+    homeViewModel: HomeViewModel = viewModel(),
+    albumViewModel: AlbumViewModel = viewModel()
 ) {
-    var selectedTab by remember { mutableIntStateOf(0) }
+    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
     val tabs = HomeTopTab.entries
     val isNewsTab = tabs[selectedTab] == HomeTopTab.NEWS
     val isShotsTab = tabs[selectedTab] == HomeTopTab.SHOTS
     
     // Collect movies from ViewModel
     val movies by homeViewModel.movies.collectAsState()
+    
+    // Collect albums from ViewModel
+    val albums by albumViewModel.albums.collectAsState()
 
     when {
         isNewsTab -> {
@@ -179,7 +184,12 @@ fun HomeContent(
                         onProfileClick = { /* TODO */ }
                     )
                     HomeTopTab.ALBUM -> AlbumFeed(
-                        onAlbumClick = { /* TODO */ }
+                        albums = albums,
+                        onAlbumClick = { albumId ->
+                            navController?.navigate(
+                                com.example.myapplication.ui.navigation.Screen.AlbumDetail.createRoute(albumId)
+                            )
+                        }
                     )
                     HomeTopTab.NEWS -> NewsFeed()
                     HomeTopTab.SHOTS -> ShotsFeed()
