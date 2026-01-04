@@ -152,7 +152,7 @@ fun MoviePage(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(220.dp)
+                    .height(185.dp)  // Reduced to 2/3 of original
             ) {
                 // Backdrop - use Coil AsyncImage for URL
                 AsyncImage(
@@ -211,8 +211,8 @@ fun MoviePage(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp)
-                    .offset(y = (-70).dp), // Pull up to overlap backdrop
-                verticalAlignment = Alignment.Top
+                    .offset(y = (-70).dp), // Adjusted for smaller backdrop
+                verticalAlignment = Alignment.Bottom
             ) {
                 // Poster - use Coil AsyncImage
                 Card(
@@ -232,29 +232,26 @@ fun MoviePage(
                 
                 Spacer(modifier = Modifier.width(16.dp))
                 
-                // Movie info - aligned with poster height
+                // Movie info - pushed down so title starts right below backdrop
                 Column(
                     modifier = Modifier
                         .weight(1f)
-                        .height(166.dp), // Same height as poster
-                    verticalArrangement = Arrangement.Bottom // Changed to Bottom to avoid overlap
+                        .padding(top = 70.dp) // Adjusted: 185dp backdrop - 115dp row start = 70dp
                 ) {
-                    // Title + Year row
-                    Row(
-                        verticalAlignment = Alignment.Bottom
-                    ) {
+                    // Title + Year (stacked to handle long titles)
+                    Column {
                         Text(
                             text = movie.title,
                             fontSize = 20.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF1A202C)
+                            color = Color(0xFF1A202C),
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
                         )
-                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
                             text = movie.year?.toString() ?: "",
-                            fontSize = 11.sp,
-                            color = Color(0xFF1A202C),
-                            modifier = Modifier.padding(bottom = 2.dp)
+                            fontSize = 12.sp,
+                            color = Color(0xFF718096)
                         )
                     }
                     
@@ -298,7 +295,7 @@ fun MoviePage(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp)
-                    .offset(y = (-50).dp)
+                    .offset(y = (-60).dp) // Adjusted to remove gap
             ) {
                 Text(
                     text = movie.synopsis ?: "",
@@ -353,58 +350,31 @@ fun MoviePage(
                 // Right: Ratings section
                 Column(
                     modifier = Modifier.weight(1f),
-                    horizontalAlignment = Alignment.Start
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         text = "Ratings",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF1A202C)
+                        color = Color(0xFF1A202C),
+                        modifier = Modifier.align(Alignment.Start)
                     )
                     
                     Spacer(modifier = Modifier.height(12.dp))
                     
+                    // Rating score + stars (centered)
                     Row(
-                        verticalAlignment = Alignment.Bottom,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
                     ) {
-                        // Rating bars - generate distribution based on rating
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(3.dp),
-                            verticalAlignment = Alignment.Bottom,
-                            modifier = Modifier.height(60.dp)
-                        ) {
-                            // Generate fake distribution centered around the rating
-                            val ratingInt = (movie.rating * 2).toInt().coerceIn(1, 10) // 0.5-5 -> 1-10
-                            val fakeDistribution = listOf(8, 15, 25, 35, 50, 45, 30, 20, 12, 6)
-                                .mapIndexed { index, base ->
-                                    val distance = kotlin.math.abs(index - ratingInt + 1)
-                                    (base - distance * 5).coerceIn(5, 55)
-                                }
-                            fakeDistribution.forEach { height ->
-                                Box(
-                                    modifier = Modifier
-                                        .width(12.dp)
-                                        .height(height.dp)
-                                        .background(
-                                            Color(0xFFB3B3B3).copy(alpha = 0.5f),
-                                            RoundedCornerShape(2.dp)
-                                        )
-                                )
-                            }
-                        }
-                        
-                        // Rating score + stars
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                text = movie.rating.toString(),
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = InnieGreen
-                            )
+                        Text(
+                            text = String.format("%.1f", movie.rating),
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = InnieGreen
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
                             Row {
                                 repeat(5) { index ->
                                     Icon(
@@ -414,10 +384,38 @@ fun MoviePage(
                                             Icons.Outlined.StarOutline,
                                         contentDescription = null,
                                         tint = Color(0xFFEC2626),
-                                        modifier = Modifier.size(12.dp)
+                                        modifier = Modifier.size(14.dp)
                                     )
                                 }
                             }
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    // Rating bars below
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.Bottom,
+                        modifier = Modifier.height(50.dp)
+                    ) {
+                        // Generate distribution based on rating
+                        val ratingInt = (movie.rating * 2).toInt().coerceIn(1, 10)
+                        val fakeDistribution = listOf(8, 15, 25, 35, 50, 45, 30, 20, 12, 6)
+                            .mapIndexed { index, base ->
+                                val distance = kotlin.math.abs(index - ratingInt + 1)
+                                (base - distance * 5).coerceIn(5, 50)
+                            }
+                        fakeDistribution.forEach { height ->
+                            Box(
+                                modifier = Modifier
+                                    .width(10.dp)
+                                    .height(height.dp)
+                                    .background(
+                                        Color(0xFFB3B3B3).copy(alpha = 0.6f),
+                                        RoundedCornerShape(2.dp)
+                                    )
+                            )
                         }
                     }
                 }

@@ -17,6 +17,12 @@ import kotlinx.coroutines.launch
  */
 class HomeViewModel(application: Application) : AndroidViewModel(application) {
     
+    companion object {
+        // Set to true during development when you change sample_movies.kt URLs
+        // Set to false for production or when you don't want to clear data
+        const val FORCE_RESEED_FOR_DEV = true
+    }
+    
     private val database = DatabaseProvider.getDatabase(application)
     private val movieRepository = MovieRepository(database.movieDao())
     private val albumRepository = AlbumRepository(database.albumDao())
@@ -38,8 +44,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             _isLoading.value = true
             
-            // Seed database if empty
-            movieRepository.seedDatabaseIfEmpty()
+            // Seed database - use forceReseed during development
+            movieRepository.seedDatabaseIfEmpty(forceReseed = FORCE_RESEED_FOR_DEV)
             albumRepository.seedDatabaseIfEmpty()
             
             // Collect movies from database

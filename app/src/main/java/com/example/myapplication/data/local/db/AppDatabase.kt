@@ -17,7 +17,7 @@ import com.example.myapplication.data.local.entities.User
         Album::class,
         AlbumMovie::class
     ],
-    version = 4, 
+    version = 5,  // Incremented to force re-seed with correct Flash poster URL 
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

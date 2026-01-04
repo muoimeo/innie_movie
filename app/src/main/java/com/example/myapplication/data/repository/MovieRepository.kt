@@ -54,8 +54,15 @@ class MovieRepository(private val movieDao: MovieDao) {
     /**
      * Seeds the database with sample movies if empty.
      * Call this during app initialization.
+     * 
+     * @param forceReseed If true, clears existing data and reseeds (useful for development)
      */
-    suspend fun seedDatabaseIfEmpty() {
+    suspend fun seedDatabaseIfEmpty(forceReseed: Boolean = false) {
+        if (forceReseed) {
+            // Clear all movies and reseed
+            movieDao.deleteAllMovies()
+        }
+        
         val count = movieDao.getMovieCount()
         if (count == 0) {
             // Insert all sample movies and series
