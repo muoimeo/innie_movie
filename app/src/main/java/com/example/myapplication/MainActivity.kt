@@ -30,6 +30,8 @@ import com.example.myapplication.ui.screens.profile.WatchHistoryScreen
 import com.example.myapplication.ui.screens.profile.ReviewsScreen
 import com.example.myapplication.ui.screens.profile.SettingsScreen
 import com.example.myapplication.ui.screens.profile.AlbumsScreen
+import com.example.myapplication.ui.screens.profile.LikesScreen
+import com.example.myapplication.ui.screens.profile.WatchlistScreen
 class AuthViewModelFactory(
     private val repository: AuthRepository
 ) : ViewModelProvider.Factory {
@@ -56,6 +58,15 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        // Initialize user session manager
+        com.example.myapplication.data.session.UserSessionManager.init(this)
+        
+        // Start guest session for dev mode
+        if (SKIP_AUTH_FOR_DEV) {
+            com.example.myapplication.data.session.UserSessionManager.startGuestSession()
+        }
+        
         setContent {
             MyApplicationTheme {
                 val navController = rememberNavController()
@@ -168,11 +179,15 @@ class MainActivity : ComponentActivity() {
                         ReviewsScreen(navController = navController)
                     }
                     composable(Profile.Likes.route) {
-                        ProfileScreen(navController = navController)
+                        LikesScreen(navController = navController)
                     }
                     composable(Profile.Settings.route) {
-            SettingsScreen(navController = navController)
-        }            }
+                        SettingsScreen(navController = navController)
+                    }
+                    composable(Profile.Watchlist.route) {
+                        WatchlistScreen(navController = navController)
+                    }
+                }
                 }
             }
         }

@@ -17,6 +17,7 @@ import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.RemoveRedEye
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,12 +52,21 @@ fun AlbumDetailScreen(
     val album by viewModel.selectedAlbum.collectAsState()
     val movies by viewModel.albumMovies.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val isLiked by viewModel.isLiked.collectAsState()
+    
+    // Snackbar state
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     
     // Load album data when screen opens
     LaunchedEffect(albumId) {
         viewModel.loadAlbumDetail(albumId)
     }
     
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = Color(0xFFF8F9FA)
+    ) { paddingValues ->
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -99,7 +109,18 @@ fun AlbumDetailScreen(
                     
                     // Stats Row (Views, Likes, Comments)
                     item {
-                        AlbumStatsRow()
+                        AlbumStatsRow(
+                            isLiked = isLiked,
+                            onLikeClick = {
+                                viewModel.toggleLike()
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = if (!isLiked) "Added to Likes" else "Removed from Likes",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                }
+                            }
+                        )
                     }
                     
                     // Movies Grid
@@ -157,6 +178,7 @@ fun AlbumDetailScreen(
             }
         }
     }
+    } // Close Scaffold
 }
 
 // Fix: White top bar WITHOUT statusBarsPadding to be truly fixed
@@ -339,9 +361,10 @@ fun formatDate(timestamp: Long): String {
 
 // Fix #6: Heart icon is now outline (FavoriteBorder) and clickable
 @Composable
-fun AlbumStatsRow() {
-    var isLiked by remember { mutableStateOf(false) }
-    
+fun AlbumStatsRow(
+    isLiked: Boolean = false,
+    onLikeClick: () -> Unit = {}
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -356,7 +379,7 @@ fun AlbumStatsRow() {
         // Clickable heart with filled icon when liked
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.clickable { isLiked = !isLiked }
+            modifier = Modifier.clickable { onLikeClick() }
         ) {
             Icon(
                 imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,

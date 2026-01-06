@@ -7,6 +7,9 @@ import com.example.myapplication.data.local.db.DatabaseProvider
 import com.example.myapplication.data.local.entities.Album
 import com.example.myapplication.data.local.entities.Movie
 import com.example.myapplication.data.repository.AlbumRepository
+import com.example.myapplication.data.repository.LikeRepository
+import com.example.myapplication.data.repository.UserActivityRepository
+import com.example.myapplication.data.session.UserSessionManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,6 +22,11 @@ class AlbumViewModel(application: Application) : AndroidViewModel(application) {
     
     private val database = DatabaseProvider.getDatabase(application)
     private val albumRepository = AlbumRepository(database.albumDao())
+    private val likeRepository = LikeRepository(database.likeDao())
+    private val userActivityRepository = UserActivityRepository(database.userActivityDao())
+    
+    private val currentUserId: String
+        get() = UserSessionManager.getUserId()
     
     private val _albums = MutableStateFlow<List<Album>>(emptyList())
     val albums: StateFlow<List<Album>> = _albums.asStateFlow()
@@ -31,6 +39,10 @@ class AlbumViewModel(application: Application) : AndroidViewModel(application) {
     
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+    
+    // Like state for current album
+    private val _isLiked = MutableStateFlow(false)
+    val isLiked: StateFlow<Boolean> = _isLiked.asStateFlow()
     
     init {
         loadAlbums()
@@ -54,8 +66,24 @@ class AlbumViewModel(application: Application) : AndroidViewModel(application) {
             // Load movies in this album - use sync method for one-time load
             val movies = albumRepository.getMoviesInAlbumSync(albumId)
             _albumMovies.value = movies
+            
+            // Check if album is liked
+            _isLiked.value = likeRepository.isLiked(currentUserId, "album", albumId)
+            
             _isLoading.value = false
         }
+    }
+    
+    fun toggleLike(): Boolean {
+        val albumId = _selectedAlbum.value?.id ?: return false
+        viewModelScope.launch {
+            val newState = likeRepository.toggleLike(currentUserId, "album", albumId)
+            _isLiked.value = newState
+            if (newState) {
+                userActivityRepository.logLike(currentUserId, "album", albumId)
+            }
+        }
+        return !_isLiked.value // Return new state immediately for UI feedback
     }
     
     fun searchAlbums(query: String) {

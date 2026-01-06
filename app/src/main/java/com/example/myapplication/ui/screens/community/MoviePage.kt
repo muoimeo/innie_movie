@@ -328,6 +328,10 @@ fun MoviePage(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // Collect interaction states from ViewModel
+                    val isInWatchlist by viewModel.isInWatchlist.collectAsState()
+                    val isLiked by viewModel.isLiked.collectAsState()
+                    
                     ActionButtonSmall(
                         text = "Rate or Review",
                         icon = Icons.Outlined.Edit,
@@ -343,9 +347,9 @@ fun MoviePage(
                         onClick = { }
                     )
                     ActionButtonSmall(
-                        text = "Add to Watchlist",
-                        icon = Icons.Outlined.BookmarkBorder,
-                        onClick = { }
+                        text = if (isInWatchlist) "In Watchlist ✓" else "Add to Watchlist",
+                        icon = if (isInWatchlist) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
+                        onClick = { viewModel.toggleWatchlist() }
                     )
                 }
                 
