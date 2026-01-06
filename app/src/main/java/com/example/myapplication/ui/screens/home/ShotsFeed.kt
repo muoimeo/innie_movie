@@ -102,6 +102,9 @@ fun ShotsFeed(
         pageCount = { Int.MAX_VALUE }
     )
     
+    // Collect liked shots as state for reactivity
+    val likedShotsSet by shotsViewModel.likedShots.collectAsState()
+    
     VerticalPager(
         state = pagerState,
         modifier = Modifier.fillMaxSize()
@@ -111,11 +114,16 @@ fun ShotsFeed(
         val relatedMovie = shot.relatedMovieId?.let { relatedMovies[it] }
         val localVideoResId = shotLocalVideoMap[shot.id]
         
+        // Use collected state for reactivity
+        val isLiked = likedShotsSet.contains(shot.id)
+        
         ShotItem(
             shot = shot,
             relatedMovie = relatedMovie,
             isCurrentPage = pagerState.currentPage == page,
             localVideoResId = localVideoResId,
+            isLiked = isLiked,
+            onLikeClick = { shotsViewModel.toggleLike(shot.id) },
             onMovieClick = { movieId ->
                 navController?.navigate(Screen.MoviePage.createRoute(movieId))
             }
@@ -130,10 +138,11 @@ fun ShotItem(
     relatedMovie: Movie?,
     isCurrentPage: Boolean,
     localVideoResId: Int? = null,
+    isLiked: Boolean = false,
+    onLikeClick: () -> Unit = {},
     onMovieClick: (Int) -> Unit = {}
 ) {
     val context = LocalContext.current
-    var isLiked by remember { mutableStateOf(false) }
     var showMoreInfo by remember { mutableStateOf(false) }
     var isPaused by remember { mutableStateOf(false) }
     var videoProgress by remember { mutableFloatStateOf(0f) }
@@ -290,7 +299,7 @@ fun ShotItem(
                 icon = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                 count = shot.likeCount,
                 tint = if (isLiked) Color(0xFFEC2626) else Color.White,
-                onClick = { isLiked = !isLiked }
+                onClick = onLikeClick
             )
             
             ShotActionButton(

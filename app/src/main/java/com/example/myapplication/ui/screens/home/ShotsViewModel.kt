@@ -6,19 +6,27 @@ import androidx.lifecycle.viewModelScope
 import com.example.myapplication.data.local.db.DatabaseProvider
 import com.example.myapplication.data.local.entities.Movie
 import com.example.myapplication.data.local.entities.Shot
+import com.example.myapplication.data.repository.LikeRepository
 import com.example.myapplication.data.repository.ShotRepository
+import com.example.myapplication.data.repository.UserActivityRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
- * ViewModel for ShotsFeed, managing shots data.
+ * ViewModel for ShotsFeed, managing shots data with activity tracking.
  */
 class ShotsViewModel(application: Application) : AndroidViewModel(application) {
     
     private val database = DatabaseProvider.getDatabase(application)
     private val shotRepository = ShotRepository(database.shotDao())
+    private val likeRepository = LikeRepository(database.likeDao())
+    private val userActivityRepository = UserActivityRepository(database.userActivityDao())
+    
+    // Get userId from session manager
+    private val currentUserId: String
+        get() = com.example.myapplication.data.session.UserSessionManager.getUserId()
     
     private val _shots = MutableStateFlow<List<Shot>>(emptyList())
     val shots: StateFlow<List<Shot>> = _shots.asStateFlow()
@@ -29,6 +37,10 @@ class ShotsViewModel(application: Application) : AndroidViewModel(application) {
     // Cache for related movies
     private val _relatedMovies = MutableStateFlow<Map<Int, Movie?>>(emptyMap())
     val relatedMovies: StateFlow<Map<Int, Movie?>> = _relatedMovies.asStateFlow()
+    
+    // Liked shots tracking
+    private val _likedShots = MutableStateFlow<Set<Int>>(emptySet())
+    val likedShots: StateFlow<Set<Int>> = _likedShots.asStateFlow()
     
     init {
         initializeData()
@@ -56,6 +68,15 @@ class ShotsViewModel(application: Application) : AndroidViewModel(application) {
                     }
                 }
                 _relatedMovies.value = movieMap
+                
+                // Load liked status for all shots
+                val liked = mutableSetOf<Int>()
+                shotsList.forEach { shot ->
+                    if (likeRepository.isLiked(currentUserId, "shot", shot.id)) {
+                        liked.add(shot.id)
+                    }
+                }
+                _likedShots.value = liked
             }
         }
     }
@@ -63,4 +84,26 @@ class ShotsViewModel(application: Application) : AndroidViewModel(application) {
     suspend fun getRelatedMovie(movieId: Int): Movie? {
         return shotRepository.getRelatedMovie(movieId)
     }
+    
+    fun logShotView(shotId: Int) {
+        viewModelScope.launch {
+            userActivityRepository.logShotView(currentUserId, shotId)
+        }
+    }
+    
+    fun toggleLike(shotId: Int) {
+        viewModelScope.launch {
+            val newState = likeRepository.toggleLike(currentUserId, "shot", shotId)
+            val current = _likedShots.value.toMutableSet()
+            if (newState) {
+                current.add(shotId)
+                userActivityRepository.logLike(currentUserId, "shot", shotId)
+            } else {
+                current.remove(shotId)
+            }
+            _likedShots.value = current
+        }
+    }
+    
+    fun isLiked(shotId: Int): Boolean = _likedShots.value.contains(shotId)
 }

@@ -27,7 +27,7 @@ sealed class BottomNavItem(
     data object Community : BottomNavItem(
         route = "community_tab",
         label = "Community",
-        selectedIcon = Icons.Filled.Person, // Will use custom icon later
+        selectedIcon = Icons.Filled.Person, 
         unselectedIcon = Icons.Outlined.Person
     )
 
@@ -66,9 +66,10 @@ sealed class BottomNavItem(
 
 sealed class Profile(val route: String) {
     data object WatchHistory : Profile("WatchHistory")
-    data object Albums : Profile("albums")
-    data object Reviews : Profile("reviews")
     data object Likes : Profile("likes")
+    data object Watchlist : Profile("watchlist")
+    data object Reviews : Profile("reviews")
+    data object Albums : Profile("albums")
     data object Settings : Profile("settings")
 }
 

@@ -28,6 +28,9 @@ class AuthViewModel(
             _state.value = _state.value.copy(isLoading = true, error = null)
             when (val result = repository.login(identifier, password)) {
                 is AuthResult.Success -> {
+                    // Connect auth to session manager for database tracking
+                    com.example.myapplication.data.session.UserSessionManager.login(result.user.userId)
+                    
                     _state.value = AuthUiState(
                         isLoading = false,
                         currentUser = result.user,

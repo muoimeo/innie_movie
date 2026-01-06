@@ -34,12 +34,17 @@ import androidx.compose.material.icons.outlined.RemoveRedEye
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -60,6 +65,10 @@ import com.example.myapplication.data.local.entities.News
 import com.example.myapplication.ui.theme.InnieGreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
+import com.example.myapplication.data.repository.LikeRepository
+import com.example.myapplication.data.repository.UserActivityRepository
+import com.example.myapplication.data.session.UserSessionManager
 
 /**
  * NewsDetailScreen - BBC/Variety-style professional article layout.
@@ -75,11 +84,21 @@ fun NewsDetailScreen(
     var isLiked by remember { mutableStateOf(false) }
     var isBookmarked by remember { mutableStateOf(false) }
     
-    // Load news from database
+    // Snackbar state
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    
+    // Database repositories
+    val db = remember { DatabaseProvider.getDatabase(context) }
+    val likeRepository = remember { LikeRepository(db.likeDao()) }
+    val userActivityRepository = remember { UserActivityRepository(db.userActivityDao()) }
+    val userId = UserSessionManager.getUserId()
+    
+    // Load news and liked status from database
     LaunchedEffect(newsId) {
         withContext(Dispatchers.IO) {
-            val db = DatabaseProvider.getDatabase(context)
             news = db.newsDao().getNewsById(newsId)
+            isLiked = likeRepository.isLiked(userId, "news", newsId)
         }
     }
     
@@ -93,7 +112,11 @@ fun NewsDetailScreen(
     val article = news!!
     val scrollState = rememberScrollState()
     
-    Box(modifier = Modifier.fillMaxSize()) {
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = Color.White
+    ) { paddingValues ->
+    Box(modifier = Modifier.fillMaxSize().padding(paddingValues)) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -362,7 +385,21 @@ fun NewsDetailScreen(
                 label = "Like",
                 isActive = isLiked,
                 activeColor = Color(0xFFEC2626),
-                onClick = { isLiked = !isLiked }
+                onClick = {
+                    scope.launch {
+                        withContext(Dispatchers.IO) {
+                            val newState = likeRepository.toggleLike(userId, "news", newsId)
+                            if (newState) {
+                                userActivityRepository.logLike(userId, "news", newsId)
+                            }
+                            isLiked = newState
+                        }
+                        snackbarHostState.showSnackbar(
+                            message = if (isLiked) "Added to Likes" else "Removed from Likes",
+                            duration = SnackbarDuration.Short
+                        )
+                    }
+                }
             )
             
             // Bookmark button
@@ -384,6 +421,7 @@ fun NewsDetailScreen(
             )
         }
     }
+    } // Close Scaffold
 }
 
 @Composable

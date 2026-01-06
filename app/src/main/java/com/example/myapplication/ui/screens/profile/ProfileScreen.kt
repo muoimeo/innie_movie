@@ -39,8 +39,22 @@ import kotlinx.coroutines.CoroutineScope
 @Composable
 fun ProfileScreen(
     navController: NavController,
-    user: UserProfile = sampleProfile
+    user: UserProfile = sampleProfile,
+    profileViewModel: ProfileViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
+    // Real stats from database
+    val watchedCount by profileViewModel.watchedCount.collectAsState()
+    val likeCount by profileViewModel.likeCount.collectAsState()
+    val likedMovies by profileViewModel.likedMovies.collectAsState()
+    val recentWatchedMovies by profileViewModel.recentWatchedMovies.collectAsState()
+    
+    // User display info from ViewModel
+    val displayName by profileViewModel.displayName.collectAsState()
+    val username by profileViewModel.username.collectAsState()
+    val followersCount by profileViewModel.followersCount.collectAsState()
+    val friendsCount by profileViewModel.friendsCount.collectAsState()
+    val followingCount by profileViewModel.followingCount.collectAsState()
+    
     // Trạng thái điều khiển Drawer (danh sách đè lên)
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
@@ -71,31 +85,57 @@ fun ProfileScreen(
                         .verticalScroll(rememberScrollState())
                 ) {
                     // 1. Header Section với nút mở Menu
-                    ProfileHeaderSection(
-                        user = user,
+                    ProfileHeaderSectionReal(
+                        displayName = displayName,
+                        username = username,
                         onMenuClick = { scope.launch { drawerState.open() } }
                     )
 
                     // 2. Social Stats (Followers, Friends...)
-                    SocialStatsSection(user)
+                    SocialStatsSectionReal(
+                        followersCount = followersCount,
+                        friendsCount = friendsCount,
+                        followingCount = followingCount
+                    )
 
                     // 3. Activity Stats (Watched, Film this year...)
-                    ActivityStatsSection(user)
-
-                    // 4. Favorite Films
-                    HorizontalFilmSection(
-                        title = "${user.name}'s Favorite Films",
-                        posters = user.favoriteFilms
+                    ActivityStatsSectionReal(
+                        watchedCount = watchedCount,
+                        likesCount = likeCount,
+                        user = user
                     )
 
-                    // 5. Recent Watched (Lọc từ data cũ)
-                    HorizontalFilmSection(
-                        title = "Recent Watched",
-                        posters = user.favoriteFilms.reversed().take(5),
-                        showStars = true,
-                        showSeeAll = true,
-                        onSeeAllClick = { navController.navigate(Profile.WatchHistory.route) }
-                    )
+                    // 4. Favorite Films from Database
+                    if (likedMovies.isNotEmpty()) {
+                        HorizontalFilmSectionFromMovies(
+                            title = "$displayName's Favorite Films",
+                            movies = likedMovies.take(8)
+                        )
+                    } else {
+                        HorizontalFilmSection(
+                            title = "${user.name}'s Favorite Films",
+                            posters = user.favoriteFilms
+                        )
+                    }
+
+                    // 5. Recent Watched from Database
+                    if (recentWatchedMovies.isNotEmpty()) {
+                        HorizontalFilmSectionFromMovies(
+                            title = "Recent Watched",
+                            movies = recentWatchedMovies.take(8),
+                            showSeeAll = true,
+                            onSeeAllClick = { navController.navigate(Profile.WatchHistory.route) }
+                        )
+                    } else {
+                        // Fallback to template when no watched movies
+                        HorizontalFilmSection(
+                            title = "Recent Watched",
+                            posters = user.favoriteFilms.reversed().take(5),
+                            showStars = true,
+                            showSeeAll = true,
+                            onSeeAllClick = { navController.navigate(Profile.WatchHistory.route) }
+                        )
+                    }
 
                     // 6. Recent Reviewed (New Section)
                     RecentReviewedSection(user, onSeeAllClick = { navController.navigate(Profile.Reviews.route) })
@@ -165,6 +205,92 @@ fun SocialStatsSection(user: UserProfile) {
     }
 }
 
+/**
+ * Profile header using ViewModel data with default placeholder avatar/background
+ */
+@Composable
+fun ProfileHeaderSectionReal(
+    displayName: String,
+    username: String,
+    onMenuClick: () -> Unit
+) {
+    Box(modifier = Modifier.fillMaxWidth().height(280.dp)) {
+        // Default grey background
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .background(
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(Color(0xFF2D3748), Color(0xFF1A202C))
+                    )
+                )
+        )
+
+        // Menu button with circular background for visibility
+        IconButton(
+            onClick = onMenuClick,
+            modifier = Modifier
+                .padding(top = 40.dp, start = 8.dp)
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.4f))
+        ) {
+            Icon(
+                imageVector = Icons.Default.Menu,
+                contentDescription = "Menu",
+                tint = Color.White,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
+        // Avatar and Name
+        Column(
+            modifier = Modifier.align(Alignment.BottomCenter),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Default person icon as avatar
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .clip(CircleShape)
+                    .border(3.dp, Color.White, CircleShape)
+                    .background(Color(0xFF4A5568)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "Avatar",
+                    tint = Color.White,
+                    modifier = Modifier.size(56.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = displayName, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text(text = username, fontSize = 14.sp, color = Color.Gray)
+        }
+    }
+}
+
+/**
+ * Social stats section using ViewModel values
+ */
+@Composable
+fun SocialStatsSectionReal(
+    followersCount: Int,
+    friendsCount: Int,
+    followingCount: Int
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        SocialItem(followersCount.toString(), "Followers")
+        SocialItem(friendsCount.toString(), "Friends")
+        SocialItem(followingCount.toString(), "Followings")
+    }
+}
+
 @Composable
 fun SocialItem(count: String, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -192,6 +318,72 @@ fun ActivityStatItem(count: Int, label: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(text = count.toString(), fontSize = 28.sp, fontWeight = FontWeight.Bold, color = color)
         Text(text = label, fontSize = 12.sp, color = Color.Gray)
+    }
+}
+
+/**
+ * Activity stats section using real database values for Watched and Likes
+ */
+@Composable
+fun ActivityStatsSectionReal(
+    watchedCount: Int,
+    likesCount: Int,
+    user: UserProfile
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly
+    ) {
+        ActivityStatItem(watchedCount, "Watched", Color(0xFF00C02B))
+        ActivityStatItem(likesCount, "Likes", Color(0xFFB34393))
+        ActivityStatItem(user.albumsCount, "Albums", Color(0xFF00C02B))
+        ActivityStatItem(user.reviewsCount, "Reviews", Color(0xFFB34393))
+    }
+}
+
+/**
+ * Horizontal film section using Movie entities from database
+ */
+@Composable
+fun HorizontalFilmSectionFromMovies(
+    title: String,
+    movies: List<com.example.myapplication.data.local.entities.Movie>,
+    showSeeAll: Boolean = false,
+    onSeeAllClick: () -> Unit = {}
+) {
+    Column(modifier = Modifier.padding(top = 24.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+            if (showSeeAll) {
+                Text(
+                    text = "See All",
+                    fontSize = 12.sp,
+                    color = Color(0xFF00C02B),
+                    modifier = Modifier.clickable { onSeeAllClick() }
+                )
+            }
+        }
+        LazyRow(
+            modifier = Modifier.padding(top = 8.dp),
+            contentPadding = PaddingValues(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            items(movies) { movie ->
+                coil.compose.AsyncImage(
+                    model = movie.posterUrl,
+                    contentDescription = movie.title,
+                    modifier = Modifier
+                        .width(80.dp)
+                        .height(120.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            }
+        }
     }
 }
 
@@ -252,6 +444,7 @@ fun HorizontalFilmSection(
         scope: CoroutineScope
     ) {
         Column(modifier = Modifier.fillMaxHeight().padding(24.dp)) {
+            // User info header
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Image(
                     painter = painterResource(id = user.avatarRes),
@@ -266,18 +459,20 @@ fun HorizontalFilmSection(
                 }
             }
             Spacer(modifier = Modifier.height(32.dp))
-            val menuItems = listOf(
+            
+            // Main menu items (excluding Settings)
+            val mainMenuItems = listOf(
                 Triple("Watch History", Icons.Default.Visibility, Profile.WatchHistory),
-                Triple("Albums", Icons.Default.Collections, Profile.Albums),
-                Triple("Reviews", Icons.Default.RateReview, Profile.Reviews),
                 Triple("Likes", Icons.Default.FavoriteBorder, Profile.Likes),
-                Triple("Settings", Icons.Default.Settings, Profile.Settings)
+                Triple("Watchlist", Icons.Default.BookmarkBorder, Profile.Watchlist),
+                Triple("Reviews", Icons.Default.RateReview, Profile.Reviews),
+                Triple("Albums", Icons.Default.Collections, Profile.Albums)
             )
 
-            menuItems.forEach { (title, icon, destination) ->
+            mainMenuItems.forEach { (title, icon, destination) ->
                 NavigationDrawerItem(
                     label = { Text(title, fontSize = 16.sp) },
-                    selected = title == "Profile",
+                    selected = false,
                     onClick = {
                         scope.launch {
                             drawerState.close()
@@ -290,12 +485,46 @@ fun HorizontalFilmSection(
                     colors = NavigationDrawerItemDefaults.colors(
                         selectedContainerColor = Color(0xFF00C02B),
                         selectedTextColor = Color.White,
-                        selectedIconColor = Color.White
+                        selectedIconColor = Color.White,
+                        unselectedContainerColor = Color.Transparent
                     ),
                     modifier = Modifier.padding(vertical = 4.dp),
                     shape = RoundedCornerShape(10.dp)
                 )
             }
+            
+            // Push Settings to bottom
+            Spacer(modifier = Modifier.weight(1f))
+            
+            // Settings item pinned at bottom
+            HorizontalDivider(
+                modifier = Modifier.padding(vertical = 8.dp),
+                color = Color.LightGray.copy(alpha = 0.5f)
+            )
+            
+            NavigationDrawerItem(
+                label = { Text("Settings", fontSize = 16.sp) },
+                selected = false,
+                onClick = {
+                    scope.launch {
+                        drawerState.close()
+                        navController.navigate(Profile.Settings.route) {
+                            launchSingleTop = true
+                        }
+                    }
+                },
+                icon = { Icon(Icons.Default.Settings, contentDescription = null) },
+                colors = NavigationDrawerItemDefaults.colors(
+                    selectedContainerColor = Color(0xFF00C02B),
+                    selectedTextColor = Color.White,
+                    selectedIconColor = Color.White,
+                    unselectedContainerColor = Color.Transparent
+                ),
+                modifier = Modifier.padding(vertical = 4.dp),
+                shape = RoundedCornerShape(10.dp)
+            )
+
+            Spacer(modifier = Modifier.height(64.dp))
         }
     }
 
