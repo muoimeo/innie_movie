@@ -133,6 +133,28 @@ class MainActivity : ComponentActivity() {
                             navController = navController
                         )
                     }
+                    
+                    composable(
+                        route = Screen.WriteReview.route,
+                        arguments = listOf(navArgument("movieId") { type = NavType.IntType })
+                    ) { backStackEntry ->
+                        val movieId = backStackEntry.arguments?.getInt("movieId") ?: 0
+                        com.example.myapplication.ui.screens.community.WriteReviewScreen(
+                            movieId = movieId,
+                            navController = navController
+                        )
+                    }
+                    
+                    composable(
+                        route = Screen.NewsDetail.route,
+                        arguments = listOf(navArgument("newsId") { type = NavType.IntType })
+                    ) { backStackEntry ->
+                        val newsId = backStackEntry.arguments?.getInt("newsId") ?: 0
+                        com.example.myapplication.ui.screens.home.NewsDetailScreen(
+                            newsId = newsId,
+                            navController = navController
+                        )
+                    }
                     composable(Profile.WatchHistory.route) {
                         WatchHistoryScreen(navController = navController)
                     }

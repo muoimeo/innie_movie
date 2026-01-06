@@ -4,10 +4,14 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.example.myapplication.data.local.dao.AlbumDao
 import com.example.myapplication.data.local.dao.MovieDao
+import com.example.myapplication.data.local.dao.NewsDao
+import com.example.myapplication.data.local.dao.ShotDao
 import com.example.myapplication.data.local.dao.UserDao
 import com.example.myapplication.data.local.entities.Album
 import com.example.myapplication.data.local.entities.AlbumMovie
 import com.example.myapplication.data.local.entities.Movie
+import com.example.myapplication.data.local.entities.News
+import com.example.myapplication.data.local.entities.Shot
 import com.example.myapplication.data.local.entities.User
 
 @Database(
@@ -15,13 +19,18 @@ import com.example.myapplication.data.local.entities.User
         User::class,
         Movie::class,
         Album::class,
-        AlbumMovie::class
+        AlbumMovie::class,
+        News::class,
+        Shot::class
     ],
-    version = 6,  // Incremented to reseed album_movies junction table
+    version = 8,  // Added detailed fields to News entity
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun userDao(): UserDao
     abstract fun movieDao(): MovieDao
     abstract fun albumDao(): AlbumDao
+    abstract fun newsDao(): NewsDao
+    abstract fun shotDao(): ShotDao
 }
+

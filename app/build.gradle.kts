@@ -63,6 +63,10 @@ dependencies {
     // Coil for async image loading
     implementation("io.coil-kt:coil-compose:2.5.0")
     
+    // ExoPlayer for local video playback
+    implementation("androidx.media3:media3-exoplayer:1.2.0")
+    implementation("androidx.media3:media3-ui:1.2.0")
+    
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

@@ -1,11 +1,15 @@
 package com.example.myapplication.ui.screens.home
 
+import android.net.Uri
+import android.view.ViewGroup
+import android.widget.FrameLayout
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -25,16 +30,22 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -44,96 +55,48 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.myapplication.R
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
+import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import com.example.myapplication.data.local.entities.Movie
+import com.example.myapplication.data.local.entities.Shot
+import com.example.myapplication.data.shotLocalVideoMap
+import com.example.myapplication.ui.navigation.Screen
 import com.example.myapplication.ui.theme.InnieGreen
-
-// Data class for Shot video
-data class ShotVideo(
-    val id: String,
-    val title: String,
-    val description: String,
-    val thumbnailRes: Int,
-    val likeCount: Int,
-    val commentCount: Int,
-    val shareCount: Int,
-    val progress: Float, // 0.0 to 1.0
-    val relatedMovie: RelatedMovie? = null,
-    val isLiked: Boolean = false
-)
-
-data class RelatedMovie(
-    val title: String,
-    val type: String,
-    val year: String,
-    val rating: Float,
-    val posterRes: Int
-)
-
-// Fake shots data
-val fakeShotsVideos = listOf(
-    ShotVideo(
-        id = "1",
-        title = "Meet the Cast of Stranger Things at the Premiere Event",
-        description = "A red-carpet reunion as the Stranger Things cast kicks off the promo tour for the highly anticipated Season 5.",
-        thumbnailRes = R.drawable.onboarding_bg,
-        likeCount = 6777,
-        commentCount = 211,
-        shareCount = 1776,
-        progress = 0.31f,
-        relatedMovie = RelatedMovie(
-            title = "Stranger Things",
-            type = "TV Series",
-            year = "2016 - 2025",
-            rating = 4.0f,
-            posterRes = R.drawable.onboarding_bg
-        )
-    ),
-    ShotVideo(
-        id = "2",
-        title = "Behind the Scenes: Dune Part Two Desert Filming",
-        description = "Discover how Denis Villeneuve recreated the iconic desert landscapes of Arrakis in this exclusive behind-the-scenes footage.",
-        thumbnailRes = R.drawable.onboarding_bg,
-        likeCount = 12340,
-        commentCount = 567,
-        shareCount = 3200,
-        progress = 0.65f,
-        relatedMovie = RelatedMovie(
-            title = "Dune: Part Two",
-            type = "Movie",
-            year = "2024",
-            rating = 4.5f,
-            posterRes = R.drawable.onboarding_bg
-        )
-    ),
-    ShotVideo(
-        id = "3",
-        title = "Marvel's Secret Wars: First Look at the Multiverse",
-        description = "The first glimpse of the upcoming Avengers Secret Wars movie, featuring heroes from across the multiverse.",
-        thumbnailRes = R.drawable.onboarding_bg,
-        likeCount = 45000,
-        commentCount = 2890,
-        shareCount = 8900,
-        progress = 0.12f,
-        relatedMovie = RelatedMovie(
-            title = "Avengers: Secret Wars",
-            type = "Movie",
-            year = "2027",
-            rating = 0f,
-            posterRes = R.drawable.onboarding_bg
-        )
-    )
-)
+import kotlinx.coroutines.delay
 
 @Composable
-fun ShotsFeed() {
-    // Infinite loop: use very large page count and start in the middle
+fun ShotsFeed(
+    navController: NavController? = null,
+    shotsViewModel: ShotsViewModel = viewModel()
+) {
+    val shots by shotsViewModel.shots.collectAsState()
+    val isLoading by shotsViewModel.isLoading.collectAsState()
+    val relatedMovies by shotsViewModel.relatedMovies.collectAsState()
+    
+    if (isLoading || shots.isEmpty()) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(color = InnieGreen)
+        }
+        return
+    }
+    
     val pagerState = rememberPagerState(
         initialPage = Int.MAX_VALUE / 2,
         pageCount = { Int.MAX_VALUE }
@@ -143,43 +106,173 @@ fun ShotsFeed() {
         state = pagerState,
         modifier = Modifier.fillMaxSize()
     ) { page ->
-        // Use modulo to cycle through the actual videos
-        val actualIndex = page % fakeShotsVideos.size
-        ShotVideoItem(
-            video = fakeShotsVideos[actualIndex]
+        val actualIndex = page % shots.size
+        val shot = shots[actualIndex]
+        val relatedMovie = shot.relatedMovieId?.let { relatedMovies[it] }
+        val localVideoResId = shotLocalVideoMap[shot.id]
+        
+        ShotItem(
+            shot = shot,
+            relatedMovie = relatedMovie,
+            isCurrentPage = pagerState.currentPage == page,
+            localVideoResId = localVideoResId,
+            onMovieClick = { movieId ->
+                navController?.navigate(Screen.MoviePage.createRoute(movieId))
+            }
         )
     }
 }
 
+@androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
 @Composable
-fun ShotVideoItem(
-    video: ShotVideo
+fun ShotItem(
+    shot: Shot,
+    relatedMovie: Movie?,
+    isCurrentPage: Boolean,
+    localVideoResId: Int? = null,
+    onMovieClick: (Int) -> Unit = {}
 ) {
-    var isLiked by remember { mutableStateOf(video.isLiked) }
+    val context = LocalContext.current
+    var isLiked by remember { mutableStateOf(false) }
     var showMoreInfo by remember { mutableStateOf(false) }
+    var isPaused by remember { mutableStateOf(false) }
+    var videoProgress by remember { mutableFloatStateOf(0f) }
+    var isVideoReady by remember { mutableStateOf(false) }
+    
+    // ExoPlayer for local video
+    val exoPlayer = remember(localVideoResId) {
+        if (localVideoResId != null) {
+            ExoPlayer.Builder(context).build().apply {
+                val videoUri = Uri.parse("android.resource://${context.packageName}/$localVideoResId")
+                setMediaItem(MediaItem.fromUri(videoUri))
+                repeatMode = Player.REPEAT_MODE_ALL
+                volume = 0f
+                prepare()
+            }
+        } else null
+    }
+    
+    // Track video progress
+    LaunchedEffect(exoPlayer, isCurrentPage, isPaused) {
+        if (exoPlayer != null && isCurrentPage && !isPaused) {
+            while (true) {
+                val duration = exoPlayer.duration
+                val position = exoPlayer.currentPosition
+                if (duration > 0) {
+                    videoProgress = position.toFloat() / duration.toFloat()
+                }
+                delay(50)
+            }
+        }
+    }
+    
+    // Player state listener
+    LaunchedEffect(exoPlayer) {
+        exoPlayer?.addListener(object : Player.Listener {
+            override fun onPlaybackStateChanged(state: Int) {
+                isVideoReady = state == Player.STATE_READY
+            }
+        })
+    }
+    
+    // Play/pause based on page visibility and pause state
+    LaunchedEffect(isCurrentPage, isPaused) {
+        if (exoPlayer != null) {
+            if (isCurrentPage && !isPaused) {
+                exoPlayer.play()
+            } else {
+                exoPlayer.pause()
+            }
+        }
+    }
+    
+    // Cleanup
+    DisposableEffect(Unit) {
+        onDispose {
+            exoPlayer?.release()
+        }
+    }
     
     Box(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) {
+                isPaused = !isPaused
+            }
     ) {
-        // Background Video/Image (full screen)
-        Image(
-            painter = painterResource(id = video.thumbnailRes),
-            contentDescription = video.title,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
+        // Video player OR thumbnail
+        if (exoPlayer != null) {
+            AndroidView(
+                factory = { ctx ->
+                    PlayerView(ctx).apply {
+                        player = exoPlayer
+                        useController = false
+                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                        layoutParams = FrameLayout.LayoutParams(
+                            ViewGroup.LayoutParams.MATCH_PARENT,
+                            ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
+            
+            // Thumbnail fallback while video loading
+            if (!isVideoReady) {
+                AsyncImage(
+                    model = shot.thumbnailUrl,
+                    contentDescription = shot.caption,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        } else {
+            // No video - just thumbnail
+            AsyncImage(
+                model = shot.thumbnailUrl,
+                contentDescription = shot.caption,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
         
-        // Gradient overlay at bottom for better text visibility
+        // Pause icon overlay (center)
+        AnimatedVisibility(
+            visible = isPaused,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.Center)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.PlayArrow,
+                    contentDescription = "Play",
+                    tint = Color.White,
+                    modifier = Modifier.size(48.dp)
+                )
+            }
+        }
+        
+        // Gradient overlay at bottom
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp)
+                .height(250.dp)
                 .align(Alignment.BottomCenter)
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
                             Color.Transparent,
-                            Color.Black.copy(alpha = 0.7f)
+                            Color.Black.copy(alpha = 0.8f)
                         )
                     )
                 )
@@ -193,44 +286,41 @@ fun ShotVideoItem(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Like button
-            ActionButton(
+            ShotActionButton(
                 icon = if (isLiked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                count = video.likeCount,
+                count = shot.likeCount,
                 tint = if (isLiked) Color(0xFFEC2626) else Color.White,
                 onClick = { isLiked = !isLiked }
             )
             
-            // Comment button
-            ActionButton(
+            ShotActionButton(
                 icon = Icons.Outlined.ChatBubbleOutline,
-                count = video.commentCount,
-                onClick = { /* TODO: Open comments */ }
+                count = shot.commentCount,
+                onClick = { }
             )
             
-            // Share button
-            ActionButton(
+            ShotActionButton(
                 icon = Icons.Default.Share,
-                count = video.shareCount,
-                onClick = { /* TODO: Share */ }
+                count = shot.shareCount,
+                onClick = { }
             )
         }
         
-        // Bottom content: Title + Progress bar (hidden when overlay is shown)
+        // Bottom content - ABOVE bottom nav (padding bottom = 80dp)
         if (!showMoreInfo) {
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomStart)
-                    .padding(start = 12.dp, end = 70.dp, bottom = 70.dp)
+                    .padding(start = 12.dp, end = 70.dp, bottom = 80.dp)
             ) {
                 // Title with "... more" button
                 Row(
                     verticalAlignment = Alignment.Bottom
                 ) {
                     Text(
-                        text = video.title,
+                        text = shot.caption,
                         color = Color.White,
-                        fontSize = 18.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
@@ -246,11 +336,11 @@ fun ShotVideoItem(
                     )
                 }
                 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 
-                // Progress bar
+                // Progress bar - real progress for video, static for image
                 VideoProgressBar(
-                    progress = video.progress,
+                    progress = if (exoPlayer != null) videoProgress else 0.35f,
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -263,15 +353,17 @@ fun ShotVideoItem(
             exit = fadeOut()
         ) {
             MoreInfoOverlay(
-                video = video,
-                onDismiss = { showMoreInfo = false }
+                shot = shot,
+                relatedMovie = relatedMovie,
+                onDismiss = { showMoreInfo = false },
+                onMovieClick = onMovieClick
             )
         }
     }
 }
 
 @Composable
-fun ActionButton(
+fun ShotActionButton(
     icon: ImageVector,
     count: Int,
     tint: Color = Color.White,
@@ -305,49 +397,61 @@ fun VideoProgressBar(
     progress: Float,
     modifier: Modifier = Modifier
 ) {
-    Box(
+    androidx.compose.foundation.layout.BoxWithConstraints(
         modifier = modifier
             .height(4.dp)
             .clip(RoundedCornerShape(2.dp))
             .background(Color.White.copy(alpha = 0.3f))
     ) {
+        val progressWidth = maxWidth * progress.coerceIn(0f, 1f)
+        
+        // Progress fill (green line)
         Box(
             modifier = Modifier
                 .fillMaxHeight()
-                .fillMaxWidth(progress)
+                .width(progressWidth)
                 .background(InnieGreen)
         )
-        // Progress indicator circle
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .align(Alignment.CenterStart)
-                .padding(start = (progress * 100).dp.coerceAtMost(280.dp))
-                .clip(CircleShape)
-                .background(Color.White)
-        )
+        
+        // Progress dot at end of green line
+        if (progress > 0.01f) {
+            Box(
+                modifier = Modifier
+                    .offset(x = progressWidth - 5.dp) // Center the 10dp dot on end of line
+                    .size(10.dp)
+                    .align(Alignment.CenterStart)
+                    .clip(CircleShape)
+                    .background(Color.White)
+            )
+        }
     }
 }
 
 @Composable
 fun MoreInfoOverlay(
-    video: ShotVideo,
-    onDismiss: () -> Unit
+    shot: Shot,
+    relatedMovie: Movie?,
+    onDismiss: () -> Unit,
+    onMovieClick: (Int) -> Unit = {}
 ) {
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.7f))
-            .clickable { onDismiss() }
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { onDismiss() }
+                )
+            }
     ) {
+        // Content column - clicks will be handled by children, not consumed by parent
         Column(
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .padding(start = 12.dp, end = 12.dp, bottom = 120.dp)
+                .padding(start = 12.dp, end = 12.dp, bottom = 100.dp)
         ) {
-            // Full title
             Text(
-                text = video.title,
+                text = shot.caption,
                 color = Color.White,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold
@@ -355,9 +459,8 @@ fun MoreInfoOverlay(
             
             Spacer(modifier = Modifier.height(12.dp))
             
-            // Description
             Text(
-                text = video.description,
+                text = shot.description ?: "",
                 color = Color(0xFFB3B3B3),
                 fontSize = 12.5.sp,
                 fontWeight = FontWeight.SemiBold,
@@ -366,7 +469,6 @@ fun MoreInfoOverlay(
             
             Spacer(modifier = Modifier.height(16.dp))
             
-            // Related content header
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -387,26 +489,34 @@ fun MoreInfoOverlay(
             
             Spacer(modifier = Modifier.height(8.dp))
             
-            // Related movie card
-            video.relatedMovie?.let { movie ->
+            // Related movie card - clickable to navigate to MoviePage
+            relatedMovie?.let { movie ->
                 Row(
-                    verticalAlignment = Alignment.Top
+                    verticalAlignment = Alignment.Top,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color.Black.copy(alpha = 0.3f))
+                        .padding(8.dp)
+                        .pointerInput(movie.id) {
+                            detectTapGestures(
+                                onTap = { onMovieClick(movie.id) }
+                            )
+                        }
                 ) {
-                    // Movie poster
-                    Image(
-                        painter = painterResource(id = movie.posterRes),
+                    AsyncImage(
+                        model = movie.posterUrl,
                         contentDescription = movie.title,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
                             .width(59.dp)
                             .height(87.dp)
                             .clip(RoundedCornerShape(4.dp))
+                            .background(Color.Gray)
                     )
                     
                     Spacer(modifier = Modifier.width(12.dp))
                     
                     Column {
-                        // Movie title
                         Text(
                             text = movie.title,
                             color = Color.White,
@@ -416,17 +526,16 @@ fun MoreInfoOverlay(
                         
                         Spacer(modifier = Modifier.height(4.dp))
                         
-                        // Type and year
                         Row {
                             Text(
-                                text = movie.type,
+                                text = if (movie.mediaType == "series") "Series" else "Movie",
                                 color = Color(0xFFB3B3B3),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Spacer(modifier = Modifier.width(16.dp))
                             Text(
-                                text = movie.year,
+                                text = movie.year?.toString() ?: "",
                                 color = Color(0xFFB3B3B3),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.SemiBold
@@ -435,7 +544,6 @@ fun MoreInfoOverlay(
                         
                         Spacer(modifier = Modifier.height(8.dp))
                         
-                        // Rating stars
                         if (movie.rating > 0) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically
@@ -457,7 +565,7 @@ fun MoreInfoOverlay(
                                 }
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = movie.rating.toString(),
+                                    text = String.format("%.1f", movie.rating),
                                     color = InnieGreen,
                                     fontSize = 14.sp
                                 )
@@ -470,7 +578,6 @@ fun MoreInfoOverlay(
     }
 }
 
-// Helper function to format counts
 fun formatShotCount(count: Int): String {
     return when {
         count >= 1000000 -> String.format("%.1fM", count / 1000000.0)

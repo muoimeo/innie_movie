@@ -23,4 +23,12 @@ sealed class Screen(val route: String) {
     data object AlbumDetail : Screen("album_detail/{albumId}") {
         fun createRoute(albumId: Int) = "album_detail/$albumId"
     }
+
+    data object WriteReview : Screen("write_review/{movieId}") {
+        fun createRoute(movieId: Int) = "write_review/$movieId"
+    }
+    
+    data object NewsDetail : Screen("news_detail/{newsId}") {
+        fun createRoute(newsId: Int) = "news_detail/$newsId"
+    }
 }

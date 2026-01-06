@@ -163,7 +163,7 @@ fun MoviePage(
                         .clip(
                             RoundedCornerShape(
                                 bottomStart = 0.dp,
-                                bottomEnd = 160.dp
+                                bottomEnd = 80.dp
                             )
                         ),
                     contentScale = ContentScale.Crop
@@ -176,7 +176,7 @@ fun MoviePage(
                         .clip(
                             RoundedCornerShape(
                                 bottomStart = 0.dp,
-                                bottomEnd = 160.dp
+                                bottomEnd = 80.dp
                             )
                         )
                         .background(
@@ -331,7 +331,11 @@ fun MoviePage(
                     ActionButtonSmall(
                         text = "Rate or Review",
                         icon = Icons.Outlined.Edit,
-                        onClick = { }
+                        onClick = { 
+                            navController.navigate(
+                                com.example.myapplication.ui.navigation.Screen.WriteReview.createRoute(movie.id)
+                            )
+                        }
                     )
                     ActionButtonSmall(
                         text = "Add to Albums",

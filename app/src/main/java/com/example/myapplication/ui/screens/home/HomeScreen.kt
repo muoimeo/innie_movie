@@ -40,6 +40,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.foundation.layout.offset
+import androidx.compose.runtime.mutableFloatStateOf
 import com.example.myapplication.R
 import com.example.myapplication.ui.components.BottomNavBar
 import com.example.myapplication.ui.navigation.BottomNavItem
@@ -126,7 +135,8 @@ fun HomeContent(
             NewsTabLayout(
                 selectedTab = selectedTab,
                 onTabSelected = { selectedTab = it },
-                tabs = tabs
+                tabs = tabs,
+                navController = navController
             )
         }
         isShotsTab -> {
@@ -134,7 +144,8 @@ fun HomeContent(
             ShotsTabLayout(
                 selectedTab = selectedTab,
                 onTabSelected = { selectedTab = it },
-                tabs = tabs
+                tabs = tabs,
+                navController = navController
             )
         }
         else -> {
@@ -191,8 +202,14 @@ fun HomeContent(
                             )
                         }
                     )
-                    HomeTopTab.NEWS -> NewsFeed()
-                    HomeTopTab.SHOTS -> ShotsFeed()
+                    HomeTopTab.NEWS -> NewsFeed(
+                        onNewsClick = { news ->
+                            navController?.navigate(
+                                com.example.myapplication.ui.navigation.Screen.NewsDetail.createRoute(news.id)
+                            )
+                        }
+                    )
+                    HomeTopTab.SHOTS -> ShotsFeed(navController = navController)
                 }
             }
         }
@@ -256,23 +273,49 @@ fun TopTabBar(
 fun NewsTabLayout(
     selectedTab: Int,
     onTabSelected: (Int) -> Unit,
-    tabs: List<HomeTopTab>
+    tabs: List<HomeTopTab>,
+    navController: NavController? = null
 ) {
+    // Collapsing search bar logic
+    val searchBarHeight = 52.dp
+    val density = LocalDensity.current
+    val searchBarHeightPx = with(density) { searchBarHeight.toPx() }
+    var searchBarOffsetHeightPx by remember { mutableFloatStateOf(0f) }
+    
+    // Smoothly hide search bar on scroll down, show on scroll up
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val delta = available.y
+                val newOffset = searchBarOffsetHeightPx + delta
+                searchBarOffsetHeightPx = newOffset.coerceIn(-searchBarHeightPx, 0f)
+                return Offset.Zero // Don't consume, let content scroll
+            }
+        }
+    }
+    
     Box(
-        modifier = Modifier.fillMaxSize()
+        modifier = Modifier
+            .fillMaxSize()
+            .nestedScroll(nestedScrollConnection)
     ) {
         // News Feed content (with hero image at top)
         NewsFeed(
-            showHeroFullScreen = true
+            showHeroFullScreen = true,
+            onNewsClick = { news ->
+                navController?.navigate(
+                    com.example.myapplication.ui.navigation.Screen.NewsDetail.createRoute(news.id)
+                )
+            }
         )
         
-        // Overlay: TopTab and Search bar - add top padding to match logo space from other tabs
+        // Overlay: TopTab (always visible) and Search bar (collapsible)
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 58.dp) // Logo height space (12dp + 40dp + 6dp)
+                .padding(top = 58.dp) // Logo height space
         ) {
-            // TopTab with blur background
+            // TopTab with blur background - always visible
             TopTabBar(
                 selectedTab = selectedTab,
                 onTabSelected = onTabSelected,
@@ -280,8 +323,19 @@ fun NewsTabLayout(
                 isOverlay = true
             )
             
-            // Search and Filter bar with blur
-            NewsSearchBar()
+            // Search bar - collapses on scroll
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(searchBarHeight)
+                    .offset { IntOffset(0, searchBarOffsetHeightPx.toInt()) }
+                    .graphicsLayer {
+                        // Fade out as it collapses
+                        alpha = 1f + (searchBarOffsetHeightPx / searchBarHeightPx)
+                    }
+            ) {
+                NewsSearchBar()
+            }
         }
     }
 }
@@ -290,13 +344,14 @@ fun NewsTabLayout(
 fun ShotsTabLayout(
     selectedTab: Int,
     onTabSelected: (Int) -> Unit,
-    tabs: List<HomeTopTab>
+    tabs: List<HomeTopTab>,
+    navController: NavController? = null
 ) {
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
         // Shots Feed content (with video at background)
-        ShotsFeed()
+        ShotsFeed(navController = navController)
         
         // Overlay: TopTab only (no search bar for shots)
         Column(
