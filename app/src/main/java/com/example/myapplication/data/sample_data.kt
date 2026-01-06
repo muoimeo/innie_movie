@@ -87,3 +87,42 @@ val recentReviewedJaws = MovieReview(
     posterRes = R.drawable.the_irishman,
     avatarRes = R.drawable.the_irishman
 )
+
+enum class NotificationType {
+    NEWS,     // Yellow - News/Articles
+    COMMENT,  // Green - Comments/Replies
+    TRAILER,  // Blue - New Trailers
+    FRIEND    // Purple - Friend Activity
+}
+
+data class NotificationItem(
+    val id: Int,
+    val title: String,
+    val description: String,
+    val time: String,
+    val isRead: Boolean,
+    val avatarRes: Int,
+    val type: NotificationType
+)
+
+val sampleNotifications = listOf(
+    // NEWS type - Yellow
+    NotificationItem(1, "Marvel Studios Announces Phase 7 Slate", "Big news! Marvel has unveiled their exciting Phase 7 lineup. Check out the full details!", "2 days ago", false, R.drawable.the_irishman, NotificationType.NEWS),
+    NotificationItem(2, "Oscar Nominations Revealed!", "The Academy has announced this year's Oscar nominations. See who made the cut!", "3 days ago", true, R.drawable.the_irishman, NotificationType.NEWS),
+    
+    // TRAILER type - Blue
+    NotificationItem(3, "New Trailer: Dune Part Three", "A new trailer for Dune: Part Three has been released! Watch it now.", "2 days ago", false, R.drawable.the_irishman, NotificationType.TRAILER),
+    NotificationItem(4, "Avatar: Fire and Ash Trailer", "The first teaser for Avatar 4 is finally here. Prepare to be amazed!", "1 week ago", true, R.drawable.the_irishman, NotificationType.TRAILER),
+    
+    // COMMENT type - Green
+    NotificationItem(5, "Emma replied to your comment", "Emma replied: 'I totally agree! The cinematography was stunning.'", "1 hour ago", false, R.drawable.the_irishman, NotificationType.COMMENT),
+    NotificationItem(6, "New comment on Oppenheimer", "John commented on your review of Oppenheimer: 'Great analysis!'", "5 hours ago", true, R.drawable.the_irishman, NotificationType.COMMENT),
+    NotificationItem(7, "Viral Review Alert!", "Your post about Parasite just hit 1,000 likes. Check out the latest comments!", "2 days ago", true, R.drawable.the_irishman, NotificationType.COMMENT),
+    
+    // FRIEND type - Purple
+    NotificationItem(8, "Emma created a new album", "Your friend Emma created a new album: 'Best Horror Films 2024'.", "3 hours ago", false, R.drawable.the_irishman, NotificationType.FRIEND),
+    NotificationItem(9, "John updated his watchlist", "John added 'Gladiator II' and 3 other movies to his watchlist.", "1 day ago", true, R.drawable.the_irishman, NotificationType.FRIEND),
+    NotificationItem(10, "Sarah rated Interstellar ★★★★★", "Your friend Sarah gave Interstellar a 5-star rating!", "2 days ago", true, R.drawable.the_irishman, NotificationType.FRIEND),
+    NotificationItem(11, "New friend request", "Mike wants to be your friend on Innie Movie.", "3 days ago", true, R.drawable.the_irishman, NotificationType.FRIEND),
+    NotificationItem(12, "David started following you", "David is now following your movie activity.", "1 week ago", true, R.drawable.the_irishman, NotificationType.FRIEND)
+)

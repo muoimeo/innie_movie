@@ -120,7 +120,7 @@ fun SearchScreen() {
             .background(Color.White)
             .padding(horizontal = 16.dp)
     ) {
-        Spacer(modifier = Modifier.height(50.dp))
+        Spacer(modifier = Modifier.height(30.dp))
 
         // Search Bar + Filter Button Row
         SearchBarWithFilter(
