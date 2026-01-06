@@ -66,7 +66,7 @@ fun HomeScreen(
     authViewModel: AuthViewModel,
     navController: NavController
 ) {
-    var currentRoute by remember { mutableStateOf(BottomNavItem.Home.route) }
+    var currentRoute by rememberSaveable { mutableStateOf(BottomNavItem.Home.route) }
 
     Scaffold(
         bottomBar = {

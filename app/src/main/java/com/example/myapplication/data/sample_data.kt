@@ -63,5 +63,27 @@ val watchHistoryList = listOf(
     MovieItem("Five Nights at Freddy's 2", R.drawable.the_irishman),
     MovieItem("The Conjuring: Last Rites", R.drawable.the_irishman),
     MovieItem("Zootopia 2", R.drawable.the_irishman),
-    MovieItem("Deadpool and Wolverine", R.drawable.the_irishman)
+    MovieItem("Deadpool and Wolverine", R.drawable.the_irishman),
+    MovieItem("Gladiator II", R.drawable.the_irishman),
+    MovieItem("Wicked", R.drawable.the_irishman),
+    MovieItem("Moana 2", R.drawable.the_irishman),
+    MovieItem("Mufasa: The Lion King", R.drawable.the_irishman),
+    MovieItem("Sonic the Hedgehog 3", R.drawable.the_irishman),
+    MovieItem("Kraven the Hunter", R.drawable.the_irishman),
+    MovieItem("The Lord of the Rings: The War of the Rohirrim", R.drawable.the_irishman),
+    MovieItem("Nosferatu", R.drawable.the_irishman),
+    MovieItem("A Minecraft Movie", R.drawable.the_irishman),
+    MovieItem("Captain America: Brave New World", R.drawable.the_irishman)
+)
+
+val recentReviewedJaws = MovieReview(
+    id = 100,
+    movieTitle = "Jaws",
+    year = "1975",
+    reviewerName = "Kyran",
+    rating = 5,
+    commentCount = 10,
+    reviewText = "A tragic tale of a lost and distressed fish hunted down by an aquaphobic police chief, a disgraced oceanographer trying to regain some of his tarnished reputation and a nasty drunk with a fetish for bowlegged women. All of them egged on by a corrupt mayor trying to find someone or something to blame for his small islands dwindling tourist industry and his poor taste in fashion. I wish it had a happy ending...",
+    posterRes = R.drawable.the_irishman,
+    avatarRes = R.drawable.the_irishman
 )
