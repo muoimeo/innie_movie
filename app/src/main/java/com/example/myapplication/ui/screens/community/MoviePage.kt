@@ -13,6 +13,7 @@ import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -121,6 +122,17 @@ fun MoviePage(
     val movieFromDb by viewModel.movie.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     
+    // Snackbar
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    
+    // Listen for snackbar events
+    LaunchedEffect(Unit) {
+        viewModel.snackbarEvent.collect { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+    
     LaunchedEffect(movieId) {
         viewModel.loadMovie(movieId)
     }
@@ -138,16 +150,21 @@ fun MoviePage(
     
     val movie = movieFromDb!!
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color(0xFFF8F9FA))
-    ) {
-        Column(
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = Color(0xFFF8F9FA)
+    ) { paddingValues ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(scrollState)
+                .padding(paddingValues)
+                .background(Color(0xFFF8F9FA))
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(scrollState)
+            ) {
             // === BACKDROP with early curve ===
             Box(
                 modifier = Modifier
@@ -349,6 +366,7 @@ fun MoviePage(
                     ActionButtonSmall(
                         text = if (isInWatchlist) "In Watchlist ✓" else "Add to Watchlist",
                         icon = if (isInWatchlist) Icons.Default.Bookmark else Icons.Outlined.BookmarkBorder,
+                        isActive = isInWatchlist,
                         onClick = { viewModel.toggleWatchlist() }
                     )
                 }
@@ -577,6 +595,7 @@ fun MoviePage(
             }
 
             Spacer(modifier = Modifier.height(40.dp))
+            }
         }
     }
 }
@@ -585,14 +604,17 @@ fun MoviePage(
 fun ActionButtonSmall(
     text: String,
     icon: ImageVector,
+    isActive: Boolean = false,
     onClick: () -> Unit
 ) {
+    val buttonColor = if (isActive) Color(0xFF2E7D32) else InnieGreen // Darker green when active
+    
     Button(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .height(36.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = InnieGreen),
+        colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
         shape = RoundedCornerShape(8.dp),
         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
     ) {
