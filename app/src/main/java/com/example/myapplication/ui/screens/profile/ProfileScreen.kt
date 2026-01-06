@@ -8,21 +8,23 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.myapplication.data.local.entities.UserProfile
 import com.example.myapplication.data.sampleProfile
+import com.example.myapplication.data.recentReviewedJaws
 import kotlinx.coroutines.launch
 import com.example.myapplication.ui.navigation.Profile
 import androidx.compose.material3.DrawerState
@@ -31,7 +33,9 @@ import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.CoroutineScope // If you are passing it as a parameter
+import kotlinx.coroutines.CoroutineScope 
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ProfileScreen(
     navController: NavController,
@@ -57,39 +61,47 @@ fun ProfileScreen(
         Scaffold(
             containerColor = Color.White
         ) { paddingValues ->
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .verticalScroll(rememberScrollState())
+            CompositionLocalProvider(
+                LocalOverscrollConfiguration provides null
             ) {
-                // 1. Header Section với nút mở Menu
-                ProfileHeaderSection(
-                    user = user,
-                    onMenuClick = { scope.launch { drawerState.open() } }
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    // 1. Header Section với nút mở Menu
+                    ProfileHeaderSection(
+                        user = user,
+                        onMenuClick = { scope.launch { drawerState.open() } }
+                    )
 
-                // 2. Social Stats (Followers, Friends...)
-                SocialStatsSection(user)
+                    // 2. Social Stats (Followers, Friends...)
+                    SocialStatsSection(user)
 
-                // 3. Activity Stats (Watched, Film this year...)
-                ActivityStatsSection(user)
+                    // 3. Activity Stats (Watched, Film this year...)
+                    ActivityStatsSection(user)
 
-                // 4. Favorite Films
-                HorizontalFilmSection(
-                    title = "${user.name}'s Favorite Films",
-                    posters = user.favoriteFilms
-                )
+                    // 4. Favorite Films
+                    HorizontalFilmSection(
+                        title = "${user.name}'s Favorite Films",
+                        posters = user.favoriteFilms
+                    )
 
-                // 5. Recent Watched (Lọc từ data cũ)
-                HorizontalFilmSection(
-                    title = "Recent Watched",
-                    posters = user.favoriteFilms.reversed().take(5),
-                    showStars = true,
-                    showSeeAll = true
-                )
+                    // 5. Recent Watched (Lọc từ data cũ)
+                    HorizontalFilmSection(
+                        title = "Recent Watched",
+                        posters = user.favoriteFilms.reversed().take(5),
+                        showStars = true,
+                        showSeeAll = true,
+                        onSeeAllClick = { navController.navigate(Profile.WatchHistory.route) }
+                    )
 
-                Spacer(modifier = Modifier.height(30.dp))
+                    // 6. Recent Reviewed (New Section)
+                    RecentReviewedSection(user, onSeeAllClick = { navController.navigate(Profile.Reviews.route) })
+
+                    Spacer(modifier = Modifier.height(120.dp))
+                }
             }
         }
     }
@@ -269,9 +281,7 @@ fun HorizontalFilmSection(
                     onClick = {
                         scope.launch {
                             drawerState.close()
-                            // Use the route defined in your sealed class
                             navController.navigate(destination.route) {
-                                // Avoid multiple copies of the same destination on the stack
                                 launchSingleTop = true
                             }
                         }
@@ -288,3 +298,130 @@ fun HorizontalFilmSection(
             }
         }
     }
+
+@Composable
+fun RecentReviewedSection(user: UserProfile, onSeeAllClick: () -> Unit) {
+    val review = recentReviewedJaws // Using the mock data added to sample_data.kt
+
+    Column(modifier = Modifier.padding(top = 24.dp, start = 16.dp, end = 16.dp)) {
+        // Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "${user.name}'s Recent Reviewed", // Or just "Kyran's Recent Reviewed" hardcoded if specifically requested, but dynamic is better
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = "See All",
+                color = Color(0xFF00C02B),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable { onSeeAllClick() }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Review Card content
+        // The background seems to have a slight gradient or just off-white/grayish tint in the image bottom
+        // Using a basic Card or Column with background
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFFF9F9F9), RoundedCornerShape(12.dp))
+                .padding(12.dp)
+        ) {
+            // Left Content (Avatar, Review Info)
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Image(
+                        painter = painterResource(id = review.avatarRes),
+                        contentDescription = "Avatar",
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape),
+                        contentScale = ContentScale.Crop
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column {
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text(
+                                text = review.movieTitle,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = review.year,
+                                fontSize = 10.sp,
+                                color = Color.Gray,
+                                modifier = Modifier.padding(bottom = 2.dp)
+                            )
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Review by ",
+                                fontSize = 11.sp,
+                                color = Color.Gray
+                            )
+                            Text(
+                                text = review.reviewerName,
+                                fontSize = 11.sp,
+                                color = Color(0xFF00C02B), // Green color for name
+                                fontWeight = FontWeight.Bold
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            // Stars
+                            Row {
+                                repeat(5) {
+                                    Text("★", color = Color.Red, fontSize = 10.sp)
+                                }
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                imageVector = Icons.Outlined.ChatBubbleOutline,
+                                contentDescription = "Comments",
+                                tint = Color.Gray,
+                                modifier = Modifier.size(10.dp)
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                            Text(
+                                text = review.commentCount.toString(), // Mock comment count
+                                fontSize = 10.sp,
+                                color = Color.Gray
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = review.reviewText,
+                    fontSize = 11.sp,
+                    color = Color.DarkGray,
+                    lineHeight = 16.sp,
+                    maxLines = 6,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Spacer(modifier = Modifier.width(12.dp))
+
+            // Right Content (Poster)
+            Image(
+                painter = painterResource(id = review.posterRes),
+                contentDescription = "Poster",
+                modifier = Modifier
+                    .width(80.dp)
+                    .height(110.dp)
+                    .clip(RoundedCornerShape(8.dp)),
+                contentScale = ContentScale.Crop
+            )
+        }
+    }
+}

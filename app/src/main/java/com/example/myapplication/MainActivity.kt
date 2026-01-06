@@ -27,6 +27,9 @@ import androidx.navigation.NavController
 import com.example.myapplication.ui.navigation.Profile
 import com.example.myapplication.ui.screens.profile.ProfileScreen
 import com.example.myapplication.ui.screens.profile.WatchHistoryScreen
+import com.example.myapplication.ui.screens.profile.ReviewsScreen
+import com.example.myapplication.ui.screens.profile.SettingsScreen
+import com.example.myapplication.ui.screens.profile.AlbumsScreen
 class AuthViewModelFactory(
     private val repository: AuthRepository
 ) : ViewModelProvider.Factory {
@@ -159,19 +162,19 @@ class MainActivity : ComponentActivity() {
                         WatchHistoryScreen(navController = navController)
                     }
                     composable(Profile.Albums.route) {
-                        ProfileScreen(navController = navController)
+                        AlbumsScreen(navController = navController)
                     }
                     composable(Profile.Reviews.route) {
-                        ProfileScreen(navController = navController)
+                        ReviewsScreen(navController = navController)
                     }
                     composable(Profile.Likes.route) {
                         ProfileScreen(navController = navController)
                     }
                     composable(Profile.Settings.route) {
-                        ProfileScreen(navController = navController)
-                    }
+            SettingsScreen(navController = navController)
+        }            }
                 }
             }
         }
     }
-}
+
