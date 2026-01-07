@@ -1,113 +1,121 @@
 package com.example.myapplication.ui.screens.profile
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.example.myapplication.data.NotificationPreferencesManager
 
 private val InnieGreen = Color(0xFF00C02B)
 
 // Notification category data
 data class NotificationCategory(
     val id: String,
+    val prefKey: String,
     val title: String,
-    val description: String,
-    var inAppEnabled: Boolean = true,
-    var emailEnabled: Boolean = false,
-    var smsEnabled: Boolean = false
+    val description: String
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationSettingsScreen(navController: NavController) {
-    // Notification categories with state
-    var categories by remember {
+    val context = LocalContext.current
+    val prefsManager = remember { NotificationPreferencesManager(context) }
+    
+    // Categories with their preference keys
+    val categories = listOf(
+        NotificationCategory(
+            id = "comments",
+            prefKey = NotificationPreferencesManager.KEY_COMMENTS,
+            title = "Comments",
+            description = "Get notified when someone comments on your reviews, lists, or replies to your comments."
+        ),
+        NotificationCategory(
+            id = "friend_updates",
+            prefKey = NotificationPreferencesManager.KEY_FRIEND_UPDATES,
+            title = "Friend Updates",
+            description = "Stay updated when your friends add new reviews, create lists, or update their profiles."
+        ),
+        NotificationCategory(
+            id = "friend_requests",
+            prefKey = NotificationPreferencesManager.KEY_FRIEND_REQUESTS,
+            title = "Friend Requests",
+            description = "Receive notifications when someone sends you a friend request or accepts yours."
+        ),
+        NotificationCategory(
+            id = "birthdays",
+            prefKey = NotificationPreferencesManager.KEY_BIRTHDAYS,
+            title = "Birthdays",
+            description = "Get reminded about your friends' birthdays so you never miss a chance to wish them."
+        ),
+        NotificationCategory(
+            id = "news",
+            prefKey = NotificationPreferencesManager.KEY_NEWS,
+            title = "News & Articles",
+            description = "Stay informed about the latest movie news, trailers, and entertainment updates."
+        ),
+        NotificationCategory(
+            id = "albums",
+            prefKey = NotificationPreferencesManager.KEY_ALBUMS,
+            title = "Albums & Lists",
+            description = "Get notified when someone follows your albums or when featured albums are updated."
+        ),
+        NotificationCategory(
+            id = "community",
+            prefKey = NotificationPreferencesManager.KEY_COMMUNITY,
+            title = "Community",
+            description = "Receive updates about community discussions, polls, and trending topics."
+        ),
+        NotificationCategory(
+            id = "memories",
+            prefKey = NotificationPreferencesManager.KEY_MEMORIES,
+            title = "Memories & Anniversaries",
+            description = "Relive your movie moments with anniversary reminders of films you watched."
+        ),
+        NotificationCategory(
+            id = "recommendations",
+            prefKey = NotificationPreferencesManager.KEY_RECOMMENDATIONS,
+            title = "Recommendations",
+            description = "Get personalized movie recommendations based on your watching history and preferences."
+        ),
+        NotificationCategory(
+            id = "releases",
+            prefKey = NotificationPreferencesManager.KEY_RELEASES,
+            title = "New Releases",
+            description = "Be the first to know when movies on your watchlist are released or available to stream."
+        ),
+        NotificationCategory(
+            id = "reviews",
+            prefKey = NotificationPreferencesManager.KEY_REVIEWS,
+            title = "Review Interactions",
+            description = "Get notified when someone likes, shares, or mentions your reviews."
+        ),
+        NotificationCategory(
+            id = "trending",
+            prefKey = NotificationPreferencesManager.KEY_TRENDING,
+            title = "Trending",
+            description = "Stay updated with trending movies, shows, and what the community is watching."
+        )
+    )
+    
+    // State for each category toggle - load from preferences
+    var toggleStates by remember {
         mutableStateOf(
-            listOf(
-                NotificationCategory(
-                    id = "comments",
-                    title = "Comments",
-                    description = "Get notified when someone comments on your reviews, lists, or replies to your comments."
-                ),
-                NotificationCategory(
-                    id = "friend_updates",
-                    title = "Friend Updates",
-                    description = "Stay updated when your friends add new reviews, create lists, or update their profiles."
-                ),
-                NotificationCategory(
-                    id = "friend_requests",
-                    title = "Friend Requests",
-                    description = "Receive notifications when someone sends you a friend request or accepts yours."
-                ),
-                NotificationCategory(
-                    id = "birthdays",
-                    title = "Birthdays",
-                    description = "Get reminded about your friends' birthdays so you never miss a chance to wish them."
-                ),
-                NotificationCategory(
-                    id = "news",
-                    title = "News & Articles",
-                    description = "Stay informed about the latest movie news, trailers, and entertainment updates."
-                ),
-                NotificationCategory(
-                    id = "albums",
-                    title = "Albums & Lists",
-                    description = "Get notified when someone follows your albums or when featured albums are updated."
-                ),
-                NotificationCategory(
-                    id = "community",
-                    title = "Community",
-                    description = "Receive updates about community discussions, polls, and trending topics."
-                ),
-                NotificationCategory(
-                    id = "memories",
-                    title = "Memories & Anniversaries",
-                    description = "Relive your movie moments with anniversary reminders of films you watched."
-                ),
-                NotificationCategory(
-                    id = "recommendations",
-                    title = "Recommendations",
-                    description = "Get personalized movie recommendations based on your watching history and preferences."
-                ),
-                NotificationCategory(
-                    id = "releases",
-                    title = "New Releases",
-                    description = "Be the first to know when movies on your watchlist are released or available to stream."
-                ),
-                NotificationCategory(
-                    id = "reviews",
-                    title = "Review Interactions",
-                    description = "Get notified when someone likes, shares, or mentions your reviews."
-                ),
-                NotificationCategory(
-                    id = "trending",
-                    title = "Trending",
-                    description = "Stay updated with trending movies, shows, and what the community is watching."
-                )
-            )
+            categories.associate { it.id to prefsManager.isEnabled(it.prefKey) }
         )
     }
-    
-    // Track expanded state for each category
-    var expandedCategory by remember { mutableStateOf<String?>(null) }
     
     Scaffold(
         topBar = {
@@ -140,227 +148,79 @@ fun NotificationSettingsScreen(navController: NavController) {
                 modifier = Modifier.padding(bottom = 16.dp)
             )
             
-            // Notification categories card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column {
-                    categories.forEachIndexed { index, category ->
-                        NotificationCategoryItem(
-                            category = category,
-                            isExpanded = expandedCategory == category.id,
-                            onExpandClick = {
-                                expandedCategory = if (expandedCategory == category.id) null else category.id
-                            },
-                            onInAppChange = { enabled ->
-                                categories = categories.map { 
-                                    if (it.id == category.id) it.copy(inAppEnabled = enabled) else it 
-                                }
-                            },
-                            onEmailChange = { enabled ->
-                                categories = categories.map { 
-                                    if (it.id == category.id) it.copy(emailEnabled = enabled) else it 
-                                }
-                            },
-                            onSmsChange = { enabled ->
-                                categories = categories.map { 
-                                    if (it.id == category.id) it.copy(smsEnabled = enabled) else it 
-                                }
-                            }
-                        )
-                        
-                        // Divider between items (except last)
-                        if (index < categories.size - 1) {
-                            HorizontalDivider(
-                                modifier = Modifier.padding(horizontal = 20.dp),
-                                thickness = 0.5.dp,
-                                color = Color(0xFFE0E0E0)
-                            )
+            // Notification categories - separate cards with equal spacing
+            categories.forEach { category ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    NotificationItem(
+                        title = category.title,
+                        description = category.description,
+                        enabled = toggleStates[category.id] ?: true,
+                        onToggle = { enabled ->
+                            // Update local state
+                            toggleStates = toggleStates + (category.id to enabled)
+                            // Save to preferences
+                            prefsManager.setEnabled(category.prefKey, enabled)
                         }
-                    }
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(24.dp))
-            
-            // Quick actions card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                shape = RoundedCornerShape(16.dp),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-            ) {
-                Column(modifier = Modifier.padding(20.dp)) {
-                    Text(
-                        text = "Quick Actions",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black
                     )
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    // Enable all in-app notifications
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                categories = categories.map { it.copy(inAppEnabled = true) }
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Enable all in-app notifications",
-                            fontSize = 14.sp,
-                            color = InnieGreen,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    
-                    // Disable all notifications
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                categories = categories.map { 
-                                    it.copy(inAppEnabled = false, emailEnabled = false, smsEnabled = false) 
-                                }
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Disable all notifications",
-                            fontSize = 14.sp,
-                            color = Color.Red,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
                 }
             }
             
-            Spacer(modifier = Modifier.height(100.dp))
+            Spacer(modifier = Modifier.height(80.dp))
         }
     }
 }
 
 @Composable
-private fun NotificationCategoryItem(
-    category: NotificationCategory,
-    isExpanded: Boolean,
-    onExpandClick: () -> Unit,
-    onInAppChange: (Boolean) -> Unit,
-    onEmailChange: (Boolean) -> Unit,
-    onSmsChange: (Boolean) -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onExpandClick() }
-    ) {
-        // Header row
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = category.title,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.Black,
-                modifier = Modifier.weight(1f)
-            )
-            
-            Icon(
-                imageVector = if (isExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
-                contentDescription = if (isExpanded) "Collapse" else "Expand",
-                tint = Color.Gray,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-        
-        // Expanded content
-        AnimatedVisibility(
-            visible = isExpanded,
-            enter = expandVertically(),
-            exit = shrinkVertically()
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color(0xFFF8F9FA))
-                    .padding(horizontal = 20.dp, vertical = 16.dp)
-            ) {
-                // Description
-                Text(
-                    text = category.description,
-                    fontSize = 13.sp,
-                    color = Color.Gray,
-                    lineHeight = 18.sp,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-                
-                // Toggle options
-                NotificationToggleRow(
-                    title = "Notify on Innie Movie",
-                    isEnabled = category.inAppEnabled,
-                    onToggle = onInAppChange
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                NotificationToggleRow(
-                    title = "Email",
-                    isEnabled = category.emailEnabled,
-                    onToggle = onEmailChange
-                )
-                
-                Spacer(modifier = Modifier.height(8.dp))
-                
-                NotificationToggleRow(
-                    title = "SMS",
-                    isEnabled = category.smsEnabled,
-                    onToggle = onSmsChange
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun NotificationToggleRow(
+private fun NotificationItem(
     title: String,
-    isEnabled: Boolean,
+    description: String,
+    enabled: Boolean,
     onToggle: (Boolean) -> Unit
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.Top
     ) {
-        Text(
-            text = title,
-            fontSize = 14.sp,
-            color = Color.Black
-        )
+        // Text content
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color.Black
+            )
+            
+            Spacer(modifier = Modifier.height(4.dp))
+            
+            Text(
+                text = description,
+                fontSize = 13.sp,
+                color = Color.Gray,
+                lineHeight = 18.sp
+            )
+        }
         
+        Spacer(modifier = Modifier.width(12.dp))
+        
+        // Toggle on the right
         Switch(
-            checked = isEnabled,
+            checked = enabled,
             onCheckedChange = onToggle,
             colors = SwitchDefaults.colors(
                 checkedThumbColor = Color.White,
                 checkedTrackColor = InnieGreen,
                 uncheckedThumbColor = Color.White,
                 uncheckedTrackColor = Color.LightGray
-            ),
-            modifier = Modifier.height(24.dp)
+            )
         )
     }
 }
