@@ -70,6 +70,9 @@ class AlbumViewModel(application: Application) : AndroidViewModel(application) {
             // Check if album is liked
             _isLiked.value = likeRepository.isLiked(currentUserId, "album", albumId)
             
+            // Log view for watch history
+            userActivityRepository.logAlbumView(currentUserId, albumId)
+            
             _isLoading.value = false
         }
     }

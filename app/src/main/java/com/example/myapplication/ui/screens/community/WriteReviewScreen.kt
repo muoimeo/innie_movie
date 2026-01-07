@@ -36,6 +36,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.myapplication.ui.theme.InnieGreen
+import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -48,8 +49,16 @@ fun WriteReviewScreen(
     navController: NavController,
     viewModel: MoviePageViewModel = viewModel()
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val movie by viewModel.movie.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
+    val scope = rememberCoroutineScope()
+    
+    // Database
+    val db = remember { com.example.myapplication.data.local.db.DatabaseProvider.getDatabase(context) }
+    val reviewRepository = remember { com.example.myapplication.data.repository.ReviewRepository(db.reviewDao()) }
+    val userActivityRepository = remember { com.example.myapplication.data.repository.UserActivityRepository(db.userActivityDao()) }
+    val userId = com.example.myapplication.data.session.UserSessionManager.getUserId()
     
     // Load movie data
     LaunchedEffect(movieId) {
@@ -62,6 +71,7 @@ fun WriteReviewScreen(
     var isLiked by remember { mutableStateOf(false) }
     var reviewText by remember { mutableStateOf("") }
     var showDatePicker by remember { mutableStateOf(false) }
+    var isPublishing by remember { mutableStateOf(false) }
     
     Box(
         modifier = Modifier
@@ -334,9 +344,26 @@ fun WriteReviewScreen(
                 ) {
                     Button(
                         onClick = {
-                            // TODO: Save review to database
-                            navController.popBackStack()
+                            if (!isPublishing && reviewText.isNotBlank()) {
+                                isPublishing = true
+                                scope.launch {
+                                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                        // Save review to database
+                                        reviewRepository.createReview(
+                                            userId = userId,
+                                            movieId = movieId,
+                                            body = reviewText,
+                                            rating = if (rating > 0) rating / 2f else null // Convert 1-10 to 0.5-5
+                                        )
+                                        
+                                        // Log movie view for watch history (film is "watched" after review)
+                                        userActivityRepository.logMovieView(userId, movieId)
+                                    }
+                                    navController.popBackStack()
+                                }
+                            }
                         },
+                        enabled = !isPublishing && reviewText.isNotBlank(),
                         modifier = Modifier
                             .width(104.dp)
                             .height(36.dp),

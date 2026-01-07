@@ -94,11 +94,14 @@ fun NewsDetailScreen(
     val userActivityRepository = remember { UserActivityRepository(db.userActivityDao()) }
     val userId = UserSessionManager.getUserId()
     
-    // Load news and liked status from database
+    // Load news and liked status from database + log view for watch history
     LaunchedEffect(newsId) {
         withContext(Dispatchers.IO) {
             news = db.newsDao().getNewsById(newsId)
             isLiked = likeRepository.isLiked(userId, "news", newsId)
+            
+            // Log view for watch history
+            userActivityRepository.logNewsView(userId, newsId)
         }
     }
     

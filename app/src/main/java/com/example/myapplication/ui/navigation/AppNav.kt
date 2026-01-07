@@ -31,4 +31,13 @@ sealed class Screen(val route: String) {
     data object NewsDetail : Screen("news_detail/{newsId}") {
         fun createRoute(newsId: Int) = "news_detail/$newsId"
     }
+    
+    data object ReviewDetail : Screen("review_detail/{reviewId}") {
+        fun createRoute(reviewId: Int) = "review_detail/$reviewId"
+    }
+    
+    // User profile - for viewing other users' profiles
+    data object UserProfile : Screen("user_profile/{userId}") {
+        fun createRoute(userId: String) = "user_profile/$userId"
+    }
 }

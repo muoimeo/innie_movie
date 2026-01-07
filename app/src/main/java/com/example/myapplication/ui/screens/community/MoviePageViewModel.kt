@@ -11,9 +11,12 @@ import com.example.myapplication.data.repository.MovieRepository
 import com.example.myapplication.data.repository.UserActivityRepository
 import com.example.myapplication.data.repository.UserMovieRepository
 import com.example.myapplication.data.repository.WatchlistRepository
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class MoviePageViewModel(application: Application) : AndroidViewModel(application) {
@@ -48,6 +51,13 @@ class MoviePageViewModel(application: Application) : AndroidViewModel(applicatio
     private val _watchlistCategories = MutableStateFlow<List<WatchlistCategory>>(emptyList())
     val watchlistCategories: StateFlow<List<WatchlistCategory>> = _watchlistCategories.asStateFlow()
     
+    // Snackbar events
+    private val _snackbarEvent = MutableSharedFlow<String>()
+    val snackbarEvent = _snackbarEvent.asSharedFlow()
+    
+    // Cache default category ID
+    private var defaultCategoryId: Int? = null
+    
     fun loadMovie(movieId: Int) {
         viewModelScope.launch {
             _isLoading.value = true
@@ -63,6 +73,9 @@ class MoviePageViewModel(application: Application) : AndroidViewModel(applicatio
             // Log view activity
             userActivityRepository.logMovieView(currentUserId, movieId)
             
+            // Ensure default category exists
+            ensureDefaultCategory()
+            
             // Done loading - show content
             _isLoading.value = false
         }
@@ -71,7 +84,21 @@ class MoviePageViewModel(application: Application) : AndroidViewModel(applicatio
         viewModelScope.launch {
             watchlistRepository.getCategoriesByUser(currentUserId).collect { categories ->
                 _watchlistCategories.value = categories
+                // Update default category ID
+                if (categories.isNotEmpty()) {
+                    defaultCategoryId = categories.first().id
+                }
             }
+        }
+    }
+    
+    private suspend fun ensureDefaultCategory() {
+        val categories = watchlistRepository.getCategoriesByUser(currentUserId).first()
+        if (categories.isEmpty()) {
+            val newId = watchlistRepository.createCategory(currentUserId, "My Watchlist", "Default watchlist")
+            defaultCategoryId = newId.toInt()
+        } else {
+            defaultCategoryId = categories.first().id
         }
     }
     
@@ -89,9 +116,22 @@ class MoviePageViewModel(application: Application) : AndroidViewModel(applicatio
     
     fun toggleWatchlist() {
         val movieId = _movie.value?.id ?: return
+        val movieTitle = _movie.value?.title ?: "Movie"
         viewModelScope.launch {
             val newState = userMovieRepository.toggleWatchlist(currentUserId, movieId)
             _isInWatchlist.value = newState
+            
+            // Also add/remove from WatchlistItem
+            val categoryId = defaultCategoryId
+            if (categoryId != null) {
+                if (newState) {
+                    watchlistRepository.addToWatchlist(categoryId, movieId)
+                    _snackbarEvent.emit("$movieTitle added to Watchlist")
+                } else {
+                    watchlistRepository.removeFromWatchlist(categoryId, movieId)
+                    _snackbarEvent.emit("$movieTitle removed from Watchlist")
+                }
+            }
         }
     }
     
@@ -126,3 +166,4 @@ class MoviePageViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 }
+

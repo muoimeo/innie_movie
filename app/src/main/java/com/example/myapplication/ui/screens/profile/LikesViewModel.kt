@@ -9,11 +9,13 @@ import com.example.myapplication.data.local.entities.Movie
 import com.example.myapplication.data.local.entities.Album
 import com.example.myapplication.data.local.entities.Shot
 import com.example.myapplication.data.local.entities.News
+import com.example.myapplication.data.local.entities.Review
 import com.example.myapplication.data.repository.LikeRepository
 import com.example.myapplication.data.repository.MovieRepository
 import com.example.myapplication.data.repository.AlbumRepository
 import com.example.myapplication.data.repository.ShotRepository
 import com.example.myapplication.data.repository.NewsRepository
+import com.example.myapplication.data.repository.ReviewRepository
 import com.example.myapplication.data.session.UserSessionManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -56,6 +58,21 @@ sealed class LikedContent {
         override val imageUrl = news.imageUrl ?: ""
         override val type = "News"
     }
+    
+    // NEW: Liked Review
+    data class LikedReview(
+        val review: Review,
+        val movieTitle: String,
+        val authorName: String
+    ) : LikedContent() {
+        override val id = review.id
+        override val title = "Review: ${movieTitle}"
+        override val imageUrl = "" // Reviews don't have thumbnails
+        override val type = "Review"
+        
+        val reviewBody: String = review.body
+        val rating: Float? = review.rating
+    }
 }
 
 /**
@@ -69,6 +86,7 @@ class LikesViewModel(application: Application) : AndroidViewModel(application) {
     private val albumRepository = AlbumRepository(database.albumDao())
     private val shotRepository = ShotRepository(database.shotDao())
     private val newsRepository = NewsRepository(database.newsDao())
+    private val reviewRepository = ReviewRepository(database.reviewDao())
     
     private val currentUserId: String
         get() = UserSessionManager.getUserId()
@@ -92,6 +110,9 @@ class LikesViewModel(application: Application) : AndroidViewModel(application) {
     private val _newsCount = MutableStateFlow(0)
     val newsCount: StateFlow<Int> = _newsCount.asStateFlow()
     
+    private val _reviewCount = MutableStateFlow(0)
+    val reviewCount: StateFlow<Int> = _reviewCount.asStateFlow()
+    
     init {
         loadLikedContent()
     }
@@ -105,6 +126,7 @@ class LikesViewModel(application: Application) : AndroidViewModel(application) {
             var albumCnt = 0
             var shotCnt = 0
             var newsCnt = 0
+            var reviewCnt = 0
             
             // Get all likes for user
             likeRepository.getAllLikesByUser(currentUserId).collect { likes ->
@@ -113,6 +135,7 @@ class LikesViewModel(application: Application) : AndroidViewModel(application) {
                 albumCnt = 0
                 shotCnt = 0
                 newsCnt = 0
+                reviewCnt = 0
                 
                 for (like in likes) {
                     when (like.targetType) {
@@ -140,6 +163,16 @@ class LikesViewModel(application: Application) : AndroidViewModel(application) {
                                 newsCnt++
                             }
                         }
+                        "review" -> {
+                            reviewRepository.getById(like.targetId)?.let { review ->
+                                // Get movie title for the review
+                                val movie = movieRepository.getMovieById(review.movieId)
+                                val movieTitle = movie?.title ?: "Unknown"
+                                val authorName = review.authorId.replace("user_", "").replace("guest_", "")
+                                likedItems.add(LikedContent.LikedReview(review, movieTitle, authorName))
+                                reviewCnt++
+                            }
+                        }
                     }
                 }
                 
@@ -148,6 +181,7 @@ class LikesViewModel(application: Application) : AndroidViewModel(application) {
                 _albumCount.value = albumCnt
                 _shotCount.value = shotCnt
                 _newsCount.value = newsCnt
+                _reviewCount.value = reviewCnt
                 _isLoading.value = false
             }
         }
@@ -160,6 +194,7 @@ class LikesViewModel(application: Application) : AndroidViewModel(application) {
             "Albums" -> _allLikes.value.filterIsInstance<LikedContent.LikedAlbum>()
             "Shots" -> _allLikes.value.filterIsInstance<LikedContent.LikedShot>()
             "News" -> _allLikes.value.filterIsInstance<LikedContent.LikedNews>()
+            "Reviews" -> _allLikes.value.filterIsInstance<LikedContent.LikedReview>()
             else -> _allLikes.value
         }
     }
