@@ -820,68 +820,8 @@ object DatabaseSeeder {
     }
     
     private suspend fun seedSampleComments(commentDao: com.example.myapplication.data.local.dao.CommentDao) {
-        val sampleComments = listOf(
-            // Comments on review 1 (The Batman)
-            Comment(
-                userId = "user_fan1",
-                targetType = "review",
-                targetId = 1,
-                content = "Totally agree! Pattinson nailed it.",
-                createdAt = System.currentTimeMillis() - 86400000 * 4
-            ),
-            Comment(
-                userId = "user_fan2",
-                targetType = "review",
-                targetId = 1,
-                content = "The Riddler was so creepy, loved it!",
-                createdAt = System.currentTimeMillis() - 86400000 * 3
-            ),
-            // Reply to first comment
-            Comment(
-                userId = "user_fan3",
-                targetType = "review",
-                targetId = 1,
-                parentCommentId = 1,
-                content = "Right? Best portrayal yet!",
-                createdAt = System.currentTimeMillis() - 86400000 * 2
-            ),
-            
-            // Comments on review 3 (Dune)
-            Comment(
-                userId = "user_spice",
-                targetType = "review",
-                targetId = 3,
-                content = "The spice must flow! 🏜️",
-                createdAt = System.currentTimeMillis() - 86400000 * 6
-            ),
-            Comment(
-                userId = "user_fremen",
-                targetType = "review",
-                targetId = 3,
-                content = "Villeneuve is a master of sci-fi.",
-                createdAt = System.currentTimeMillis() - 86400000 * 5
-            ),
-            
-            // Comments on album (for future use)
-            Comment(
-                userId = "user_collector",
-                targetType = "album",
-                targetId = 1,
-                content = "Great collection! Adding to my watchlist.",
-                createdAt = System.currentTimeMillis() - 86400000 * 8
-            ),
-            
-            // Comments on news (for future use)
-            Comment(
-                userId = "user_newsreader",
-                targetType = "news",
-                targetId = 1,
-                content = "Can't wait for this!",
-                createdAt = System.currentTimeMillis() - 86400000 * 1
-            )
-        )
-        
-        sampleComments.forEach { comment ->
+        // Use sample comments from sample_comments.kt
+        com.example.myapplication.data.sampleComments.forEach { comment ->
             commentDao.insert(comment)
         }
     }

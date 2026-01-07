@@ -69,6 +69,7 @@ import kotlinx.coroutines.launch
 import com.example.myapplication.data.repository.LikeRepository
 import com.example.myapplication.data.repository.UserActivityRepository
 import com.example.myapplication.data.session.UserSessionManager
+import com.example.myapplication.ui.components.CommentBottomSheet
 
 /**
  * NewsDetailScreen - BBC/Variety-style professional article layout.
@@ -87,6 +88,9 @@ fun NewsDetailScreen(
     // Snackbar state
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    
+    // Comment bottom sheet state
+    var showComments by remember { mutableStateOf(false) }
     
     // Database repositories
     val db = remember { DatabaseProvider.getDatabase(context) }
@@ -364,7 +368,8 @@ fun NewsDetailScreen(
                     EngagementStat(
                         icon = Icons.Outlined.ChatBubbleOutline,
                         count = article.commentCount,
-                        label = "comments"
+                        label = "comments",
+                        modifier = Modifier.clickable { showComments = true }
                     )
                 }
                 
@@ -425,6 +430,15 @@ fun NewsDetailScreen(
         }
     }
     } // Close Scaffold
+    
+    // Comment Bottom Sheet
+    if (showComments) {
+        CommentBottomSheet(
+            targetType = "news",
+            targetId = newsId,
+            onDismiss = { showComments = false }
+        )
+    }
 }
 
 @Composable
@@ -486,10 +500,12 @@ fun EngagementStat(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     count: Int,
     label: String,
-    tint: Color = Color.Gray
+    tint: Color = Color.Gray,
+    modifier: Modifier = Modifier
 ) {
     Column(
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier
     ) {
         Icon(
             imageVector = icon,

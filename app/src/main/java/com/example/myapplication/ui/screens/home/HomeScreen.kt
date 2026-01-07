@@ -124,7 +124,7 @@ fun HomeScreen(
                     currentRoute = BottomNavItem.Profile.route
                 }
             )
-            BottomNavItem.Notifications.route -> NotificationsScreen(onBackClick = { currentRoute = BottomNavItem.Home.route })
+            BottomNavItem.Notifications.route -> NotificationsScreen(navController = navController, onBackClick = { currentRoute = BottomNavItem.Home.route })
             BottomNavItem.Profile.route -> ProfileScreen(
                 navController = navController,
                 onNavigateToSearch = { 
