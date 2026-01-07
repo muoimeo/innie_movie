@@ -8,6 +8,7 @@ import com.example.myapplication.data.local.entities.Album
 import com.example.myapplication.data.local.entities.Movie
 import com.example.myapplication.data.repository.AlbumRepository
 import com.example.myapplication.data.repository.LikeRepository
+import com.example.myapplication.data.repository.SavedAlbumRepository
 import com.example.myapplication.data.repository.UserActivityRepository
 import com.example.myapplication.data.session.UserSessionManager
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +24,7 @@ class AlbumViewModel(application: Application) : AndroidViewModel(application) {
     private val database = DatabaseProvider.getDatabase(application)
     private val albumRepository = AlbumRepository(database.albumDao())
     private val likeRepository = LikeRepository(database.likeDao())
+    private val savedAlbumRepository = SavedAlbumRepository(database.savedAlbumDao())
     private val userActivityRepository = UserActivityRepository(database.userActivityDao())
     
     private val currentUserId: String
@@ -43,6 +45,10 @@ class AlbumViewModel(application: Application) : AndroidViewModel(application) {
     // Like state for current album
     private val _isLiked = MutableStateFlow(false)
     val isLiked: StateFlow<Boolean> = _isLiked.asStateFlow()
+    
+    // Save state for current album (Add to Albums)
+    private val _isSaved = MutableStateFlow(false)
+    val isSaved: StateFlow<Boolean> = _isSaved.asStateFlow()
     
     init {
         loadAlbums()
@@ -70,6 +76,9 @@ class AlbumViewModel(application: Application) : AndroidViewModel(application) {
             // Check if album is liked
             _isLiked.value = likeRepository.isLiked(currentUserId, "album", albumId)
             
+            // Check if album is saved to library
+            _isSaved.value = savedAlbumRepository.isSaved(currentUserId, albumId)
+            
             // Log view for watch history
             userActivityRepository.logAlbumView(currentUserId, albumId)
             
@@ -89,6 +98,18 @@ class AlbumViewModel(application: Application) : AndroidViewModel(application) {
         return !_isLiked.value // Return new state immediately for UI feedback
     }
     
+    /**
+     * Toggle save state for current album (Add to Albums / Remove from Albums)
+     */
+    fun toggleSave(): Boolean {
+        val albumId = _selectedAlbum.value?.id ?: return false
+        viewModelScope.launch {
+            val newState = savedAlbumRepository.toggleSave(currentUserId, albumId)
+            _isSaved.value = newState
+        }
+        return !_isSaved.value
+    }
+    
     fun searchAlbums(query: String) {
         viewModelScope.launch {
             if (query.isBlank()) {
@@ -99,3 +120,4 @@ class AlbumViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 }
+

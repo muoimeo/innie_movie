@@ -8,7 +8,9 @@ import com.example.myapplication.data.local.dao.LikeDao
 import com.example.myapplication.data.local.dao.MovieDao
 import com.example.myapplication.data.local.dao.NewsDao
 import com.example.myapplication.data.local.dao.ReviewDao
+import com.example.myapplication.data.local.dao.SavedAlbumDao
 import com.example.myapplication.data.local.dao.ShotDao
+import com.example.myapplication.data.local.dao.SocialDao
 import com.example.myapplication.data.local.dao.UserActivityDao
 import com.example.myapplication.data.local.dao.UserDao
 import com.example.myapplication.data.local.dao.UserMovieStatsDao
@@ -17,10 +19,13 @@ import com.example.myapplication.data.local.dao.WatchlistDao
 import com.example.myapplication.data.local.entities.Album
 import com.example.myapplication.data.local.entities.AlbumMovie
 import com.example.myapplication.data.local.entities.Comment
+import com.example.myapplication.data.local.entities.Follow
+import com.example.myapplication.data.local.entities.Friendship
 import com.example.myapplication.data.local.entities.Like
 import com.example.myapplication.data.local.entities.Movie
 import com.example.myapplication.data.local.entities.News
 import com.example.myapplication.data.local.entities.Review
+import com.example.myapplication.data.local.entities.SavedAlbum
 import com.example.myapplication.data.local.entities.Shot
 import com.example.myapplication.data.local.entities.User
 import com.example.myapplication.data.local.entities.UserActivity
@@ -46,9 +51,12 @@ import com.example.myapplication.data.local.entities.WatchlistItem
         WatchlistItem::class,
         Like::class,
         UserActivity::class,
-        Comment::class
+        Comment::class,
+        SavedAlbum::class,
+        Follow::class,
+        Friendship::class
     ],
-    version = 12,  // Added displayName, gender, dateOfBirth, coverUrl to User entity
+    version = 22,  // Reduced synthetic stats for better diversity, fixed Profile crash
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -67,4 +75,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun likeDao(): LikeDao
     abstract fun userActivityDao(): UserActivityDao
     abstract fun commentDao(): CommentDao
+    abstract fun savedAlbumDao(): SavedAlbumDao
+    abstract fun socialDao(): SocialDao
 }

@@ -7,12 +7,15 @@ import com.example.myapplication.data.local.db.DatabaseProvider
 import com.example.myapplication.data.local.entities.Movie
 import com.example.myapplication.data.local.entities.UserActivity
 import com.example.myapplication.data.local.entities.Like
+import com.example.myapplication.data.local.entities.User
 import com.example.myapplication.data.repository.LikeRepository
 import com.example.myapplication.data.repository.UserActivityRepository
 import com.example.myapplication.data.repository.UserMovieRepository
 import com.example.myapplication.data.repository.WatchlistRepository
 import com.example.myapplication.data.repository.MovieRepository
 import com.example.myapplication.data.repository.ReviewRepository
+import com.example.myapplication.data.repository.SocialRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -21,29 +24,47 @@ import kotlinx.coroutines.launch
 
 /**
  * ViewModel for Profile screens, providing real stats from database.
+ * Supports loading data for any user (own profile or other user's profile).
  */
 class ProfileViewModel(application: Application) : AndroidViewModel(application) {
     
     private val database = DatabaseProvider.getDatabase(application)
+    private val userDao = database.userDao()
     private val likeRepository = LikeRepository(database.likeDao())
     private val userActivityRepository = UserActivityRepository(database.userActivityDao())
     private val userMovieRepository = UserMovieRepository(database.userMovieStatsDao())
     private val watchlistRepository = WatchlistRepository(database.watchlistDao())
     private val movieRepository = MovieRepository(database.movieDao())
     private val reviewRepository = ReviewRepository(database.reviewDao())
+    private val socialRepository = SocialRepository(database.socialDao())
     
-    // Get userId from session manager
+    // Get userId from session manager (for own profile)
     private val currentUserId: String
         get() = com.example.myapplication.data.session.UserSessionManager.getUserId()
     
-    // User display info
+    // Track which user's profile is currently loaded
+    private var loadedUserId: String? = null
+    
+    // Job to cancel previous loading operations when loading new user
+    private var loadingJob: Job? = null
+    
+    // User info (from User entity)
     private val _displayName = MutableStateFlow("Guest User")
     val displayName: StateFlow<String> = _displayName.asStateFlow()
     
     private val _username = MutableStateFlow("@guest")
     val username: StateFlow<String> = _username.asStateFlow()
     
-    // Social stats (default 0 for guest/dev mode)
+    private val _bio = MutableStateFlow<String?>(null)
+    val bio: StateFlow<String?> = _bio.asStateFlow()
+    
+    private val _avatarUrl = MutableStateFlow<String?>(null)
+    val avatarUrl: StateFlow<String?> = _avatarUrl.asStateFlow()
+    
+    private val _coverUrl = MutableStateFlow<String?>(null)
+    val coverUrl: StateFlow<String?> = _coverUrl.asStateFlow()
+    
+    // Social stats (loaded from database)
     private val _followersCount = MutableStateFlow(0)
     val followersCount: StateFlow<Int> = _followersCount.asStateFlow()
     
@@ -81,68 +102,110 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
     
     init {
-        loadProfileData()
+        // Load own profile by default
+        loadForUser(currentUserId)
     }
     
-    private fun loadProfileData() {
-        viewModelScope.launch {
+    /**
+     * Load profile data for a specific user.
+     * Call this with targetUserId when viewing another user's profile.
+     * Cancels previous loading operations to prevent stale data updates.
+     */
+    fun loadForUser(userId: String) {
+        // Cancel previous loading job to prevent multiple collectors
+        loadingJob?.cancel()
+        loadedUserId = userId
+        
+        // Start new loading job that groups all collectors
+        loadingJob = viewModelScope.launch {
             _isLoading.value = true
             
-            // Load watched count
-            userMovieRepository.getWatchedCount(currentUserId).collect { count ->
-                _watchedCount.value = count
+            // Load user info from database (one-shot, not flow)
+            val user = userDao.getUserById(userId)
+            if (user != null) {
+                _displayName.value = user.displayName ?: user.username
+                _username.value = user.username
+                _bio.value = user.bio
+                _avatarUrl.value = user.avatarUrl
+                _coverUrl.value = user.coverUrl
+            } else {
+                // Fallback for unknown user
+                _displayName.value = userId.replace("user_", "").replaceFirstChar { it.uppercase() }
+                _username.value = "@${userId.replace("user_", "")}"
+                _bio.value = null
+                _avatarUrl.value = null
+                _coverUrl.value = null
             }
-        }
-        
-        viewModelScope.launch {
-            // Load like count
-            likeRepository.getUserLikeCount(currentUserId).collect { count ->
-                _likeCount.value = count
-            }
-        }
-        
-        viewModelScope.launch {
-            // Load user review count from database
-            reviewRepository.getUserReviewCount(currentUserId).collect { count ->
-                _reviewCount.value = count
-            }
-        }
-        
-        viewModelScope.launch {
-            // Load recent activity
-            userActivityRepository.getRecentActivity(currentUserId, 20).collect { activities ->
-                _recentActivity.value = activities
-            }
-        }
-        
-        viewModelScope.launch {
-            // Load liked movies
-            likeRepository.getLikedMovieIds(currentUserId).collect { movieIds ->
-                val movies = movieIds.mapNotNull { movieRepository.getMovieById(it) }
-                _likedMovies.value = movies
-            }
-        }
-        
-        viewModelScope.launch {
-            // Load watchlist movies
-            watchlistRepository.getAllWatchlistMovies(currentUserId).collect { movies ->
-                _watchlistMovies.value = movies
-            }
-        }
-        
-        viewModelScope.launch {
-            // Load recent watched movies
-            userMovieRepository.getWatchedMovies(currentUserId).collect { watchedStats ->
-                val movies = watchedStats.take(10).mapNotNull { stats ->
-                    movieRepository.getMovieById(stats.movieId)
+            
+            // Launch child coroutines for reactive flows (within this job scope)
+            launch {
+                userMovieRepository.getWatchedCount(userId).collect { count ->
+                    _watchedCount.value = count
                 }
-                _recentWatchedMovies.value = movies
-                _isLoading.value = false
+            }
+            
+            launch {
+                likeRepository.getUserLikeCount(userId).collect { count ->
+                    _likeCount.value = count
+                }
+            }
+            
+            launch {
+                reviewRepository.getUserReviewCount(userId).collect { count ->
+                    _reviewCount.value = count
+                }
+            }
+            
+            launch {
+                socialRepository.getFollowersCount(userId).collect { count ->
+                    _followersCount.value = count
+                }
+            }
+            
+            launch {
+                socialRepository.getFollowingCount(userId).collect { count ->
+                    _followingCount.value = count
+                }
+            }
+            
+            launch {
+                socialRepository.getFriendsCount(userId).collect { count ->
+                    _friendsCount.value = count
+                }
+            }
+            
+            launch {
+                userActivityRepository.getRecentActivity(userId, 20).collect { activities ->
+                    _recentActivity.value = activities
+                }
+            }
+            
+            launch {
+                likeRepository.getLikedMovieIds(userId).collect { movieIds ->
+                    val movies = movieIds.mapNotNull { movieRepository.getMovieById(it) }
+                    _likedMovies.value = movies
+                }
+            }
+            
+            launch {
+                watchlistRepository.getAllWatchlistMovies(userId).collect { movies ->
+                    _watchlistMovies.value = movies
+                }
+            }
+            
+            launch {
+                userMovieRepository.getWatchedMovies(userId).collect { watchedStats ->
+                    val movies = watchedStats.take(10).mapNotNull { stats ->
+                        movieRepository.getMovieById(stats.movieId)
+                    }
+                    _recentWatchedMovies.value = movies
+                    _isLoading.value = false
+                }
             }
         }
     }
     
     fun refresh() {
-        loadProfileData()
+        loadedUserId?.let { loadForUser(it) }
     }
 }

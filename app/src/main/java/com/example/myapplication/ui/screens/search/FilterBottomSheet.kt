@@ -23,30 +23,28 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-// Filter Colors
-private val FilterBackgroundColor = Color(0xFF1E2235)
-private val FilterSurfaceColor = Color(0xFF252A40)
-private val FilterAccentColor = Color(0xFFD4A84B) // Gold/yellow color for selected text
-private val FilterTextColor = Color.White
-private val FilterSecondaryTextColor = Color(0xFFB0B0B0)
+// Filter Colors - using app's InnieGreen theme with LIGHT background
+private val FilterBackgroundColor = Color.White
+private val FilterSurfaceColor = Color(0xFFF5F5F5)
+private val FilterAccentColor = Color(0xFF00C02B) // InnieGreen
+private val FilterTextColor = Color(0xFF1A1A1A) // Dark gray
+private val FilterSecondaryTextColor = Color(0xFF666666)
 
 // Sample filter options (will be replaced by database later)
 object FilterOptions {
-    val countries = listOf("UK", "Canada", "Korea", "Hong Kong", "USA", "Japan", "France", "Thailand", "China", "Australia", "Taiwan", "Germany", "Other")
-    val contentTypes = listOf("Movie", "TV Series", "Documentary", "Animation", "Short Film")
+    val mediaTypes = listOf("Movie", "Series")
     val genres = listOf("Action", "Comedy", "Drama", "Horror", "Sci-Fi", "Romance", "Thriller", "Fantasy", "Adventure", "Crime")
-    val versions = listOf("Original", "Director's Cut", "Extended", "Remastered", "3D", "IMAX")
     val releaseYears = listOf("2024", "2023", "2022", "2021", "2020", "2019", "2010s", "2000s", "1990s", "Older")
+    val ratings = listOf("4.5+", "4.0+", "3.5+", "3.0+", "Any")
     val sortOptions = listOf("Newest", "Oldest", "A-Z", "Z-A", "Popular", "Rating")
 }
 
 // Data class for filter state
 data class FilterState(
-    val selectedCountries: Set<String> = emptySet(),
-    val selectedContentTypes: Set<String> = emptySet(),
+    val selectedMediaTypes: Set<String> = emptySet(),
     val selectedGenres: Set<String> = emptySet(),
-    val selectedVersions: Set<String> = emptySet(),
     val selectedYears: Set<String> = emptySet(),
+    val minRating: String = "Any",
     val selectedSort: String = "Newest"
 )
 
@@ -98,33 +96,18 @@ fun FilterBottomSheet(
                     .fillMaxWidth()
                     .verticalScroll(rememberScrollState())
             ) {
-                // Country
+                // Media Type
                 ExpandableFilterSection(
-                    title = "Country:",
-                    options = FilterOptions.countries,
-                    selectedOptions = filterState.selectedCountries,
+                    title = "Media Type:",
+                    options = FilterOptions.mediaTypes,
+                    selectedOptions = filterState.selectedMediaTypes,
                     onOptionToggle = { option ->
-                        val newSet = if (filterState.selectedCountries.contains(option)) {
-                            filterState.selectedCountries - option
+                        val newSet = if (filterState.selectedMediaTypes.contains(option)) {
+                            filterState.selectedMediaTypes - option
                         } else {
-                            filterState.selectedCountries + option
+                            filterState.selectedMediaTypes + option
                         }
-                        onFilterChange(filterState.copy(selectedCountries = newSet))
-                    }
-                )
-
-                // Content Type
-                ExpandableFilterSection(
-                    title = "Content Type:",
-                    options = FilterOptions.contentTypes,
-                    selectedOptions = filterState.selectedContentTypes,
-                    onOptionToggle = { option ->
-                        val newSet = if (filterState.selectedContentTypes.contains(option)) {
-                            filterState.selectedContentTypes - option
-                        } else {
-                            filterState.selectedContentTypes + option
-                        }
-                        onFilterChange(filterState.copy(selectedContentTypes = newSet))
+                        onFilterChange(filterState.copy(selectedMediaTypes = newSet))
                     }
                 )
 
@@ -143,21 +126,6 @@ fun FilterBottomSheet(
                     }
                 )
 
-                // Version
-                ExpandableFilterSection(
-                    title = "Version:",
-                    options = FilterOptions.versions,
-                    selectedOptions = filterState.selectedVersions,
-                    onOptionToggle = { option ->
-                        val newSet = if (filterState.selectedVersions.contains(option)) {
-                            filterState.selectedVersions - option
-                        } else {
-                            filterState.selectedVersions + option
-                        }
-                        onFilterChange(filterState.copy(selectedVersions = newSet))
-                    }
-                )
-
                 // Release Year
                 ExpandableFilterSection(
                     title = "Release Year:",
@@ -170,6 +138,16 @@ fun FilterBottomSheet(
                             filterState.selectedYears + option
                         }
                         onFilterChange(filterState.copy(selectedYears = newSet))
+                    }
+                )
+
+                // Rating (single selection)
+                ExpandableSortSection(
+                    title = "Minimum Rating:",
+                    options = FilterOptions.ratings,
+                    selectedOption = filterState.minRating,
+                    onOptionSelect = { option ->
+                        onFilterChange(filterState.copy(minRating = option))
                     }
                 )
 
@@ -192,8 +170,8 @@ fun FilterBottomSheet(
                     .padding(horizontal = 20.dp)
                     .height(50.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.White,
-                    contentColor = Color.Black
+                    containerColor = FilterAccentColor,
+                    contentColor = Color.White
                 ),
                 shape = RoundedCornerShape(12.dp)
             ) {
@@ -279,7 +257,7 @@ fun ExpandableFilterSection(
         }
 
         // Divider
-        HorizontalDivider(color = Color(0xFF3A3F55), thickness = 0.5.dp)
+        HorizontalDivider(color = Color(0xFFE0E0E0), thickness = 0.5.dp)
     }
 }
 

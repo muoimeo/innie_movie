@@ -29,7 +29,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -76,12 +78,22 @@ fun HomeScreen(
     navController: NavController
 ) {
     var currentRoute by rememberSaveable { mutableStateOf(BottomNavItem.Home.route) }
+    
+    // State for add-favorite mode
+    var isAddingFavorite by rememberSaveable { mutableStateOf(false) }
+    
+    // Get database and like dao for persisting favorites
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val database = remember { com.example.myapplication.data.local.db.DatabaseProvider.getDatabase(context) }
+    val coroutineScope = rememberCoroutineScope()
 
     Scaffold(
         bottomBar = {
             BottomNavBar(
                 currentRoute = currentRoute,
                 onItemClick = { item ->
+                    // Reset add mode when switching tabs manually
+                    isAddingFavorite = false
                     currentRoute = item.route
                 }
             )
@@ -96,9 +108,30 @@ fun HomeScreen(
                 )
             }
             BottomNavItem.Community.route -> CommunityContent(navController = navController)
-            BottomNavItem.Search.route -> SearchScreen()
+            BottomNavItem.Search.route -> SearchScreen(
+                navController = navController,
+                isAddMode = isAddingFavorite,
+                onMovieSelected = { movieId ->
+                    // Save this movie as a favorite (like)
+                    val userId = com.example.myapplication.data.session.UserSessionManager.getUserId()
+                    coroutineScope.launch {
+                        database.likeDao().like(
+                            com.example.myapplication.data.local.entities.Like(userId, "movie", movieId)
+                        )
+                    }
+                    // Return to profile
+                    isAddingFavorite = false
+                    currentRoute = BottomNavItem.Profile.route
+                }
+            )
             BottomNavItem.Notifications.route -> NotificationsScreen(onBackClick = { currentRoute = BottomNavItem.Home.route })
-            BottomNavItem.Profile.route -> ProfileScreen(navController= navController)
+            BottomNavItem.Profile.route -> ProfileScreen(
+                navController = navController,
+                onNavigateToSearch = { 
+                    isAddingFavorite = true
+                    currentRoute = BottomNavItem.Search.route 
+                }
+            )
             else -> {
                 // Fallback để tránh crash
                 HomeContent(
@@ -109,6 +142,7 @@ fun HomeScreen(
         }
     }
 }
+
 
 @Composable
 fun HomeContent(

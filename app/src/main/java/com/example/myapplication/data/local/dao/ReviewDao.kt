@@ -70,5 +70,10 @@ interface ReviewDao {
     @Transaction
     @Query("SELECT * FROM reviews WHERE authorId = :userId ORDER BY createdAt DESC")
     fun getReviewsByUserWithMovies(userId: String): Flow<List<ReviewWithMovie>>
+    
+    // Get reviews by multiple authors (for Following tab - reviews from followed users)
+    @Transaction
+    @Query("SELECT * FROM reviews WHERE authorId IN (:authorIds) ORDER BY createdAt DESC LIMIT :limit")
+    fun getReviewsByAuthorsWithMovies(authorIds: List<String>, limit: Int = 50): Flow<List<ReviewWithMovie>>
 }
 

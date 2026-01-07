@@ -53,6 +53,7 @@ fun AlbumDetailScreen(
     val movies by viewModel.albumMovies.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val isLiked by viewModel.isLiked.collectAsState()
+    val isSaved by viewModel.isSaved.collectAsState()
     
     // Snackbar state
     val snackbarHostState = remember { SnackbarHostState() }
@@ -93,7 +94,19 @@ fun AlbumDetailScreen(
                     
                     // Author & Title Section
                     item {
-                        AlbumInfoSection(album = album!!)
+                        AlbumInfoSection(
+                            album = album!!,
+                            isSaved = isSaved,
+                            onSaveClick = {
+                                viewModel.toggleSave()
+                                scope.launch {
+                                    snackbarHostState.showSnackbar(
+                                        message = if (!isSaved) "Added to Albums" else "Removed from Albums",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                }
+                            }
+                        )
                     }
                     
                     // Description
@@ -257,7 +270,17 @@ fun AlbumCoverSection(album: Album) {
 }
 
 @Composable
-fun AlbumInfoSection(album: Album) {
+fun AlbumInfoSection(
+    album: Album,
+    isSaved: Boolean = false,
+    onSaveClick: () -> Unit = {}
+) {
+    // Format author name from ownerId (e.g., "user_marquee" -> "Marquee")
+    val authorName = album.ownerId
+        .replace("user_", "")
+        .replace("guest_", "")
+        .replaceFirstChar { it.uppercase() }
+    
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -273,39 +296,22 @@ fun AlbumInfoSection(album: Album) {
                 modifier = Modifier
                     .size(22.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF7D3131))
+                    .background(InnieGreen)
             )
             
             Spacer(modifier = Modifier.width(6.dp))
             
-            // Author name (using ownerId for now)
+            // Author display name (cleaned up)
             Text(
-                text = album.ownerId,
+                text = authorName,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF1A202C)
             )
             
-            Spacer(modifier = Modifier.width(6.dp))
-            
-            // Pro badge - reduced vertical padding to 0dp
-            Box(
-                modifier = Modifier
-                    .background(InnieGreen, RoundedCornerShape(5.dp))
-                    .border(0.6.dp, Color(0xFFCB30E0), RoundedCornerShape(5.dp))
-                    .padding(horizontal = 6.dp, vertical = 0.dp)
-            ) {
-                Text(
-                    text = "Pro",
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
-            
             Spacer(modifier = Modifier.weight(1f))
             
-            // Fix #4: Published date formatted properly
+            // Published date formatted properly
             Text(
                 text = formatDate(album.createdAt),
                 fontSize = 9.sp,
@@ -328,18 +334,19 @@ fun AlbumInfoSection(album: Album) {
                 modifier = Modifier.weight(1f)
             )
             
-            // Add to Albums button
+            // Add/Remove from Albums button - clickable with dynamic state
             Column(
-                horizontalAlignment = Alignment.CenterHorizontally
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.clickable { onSaveClick() }
             ) {
                 Icon(
-                    imageVector = Icons.Outlined.Add,
-                    contentDescription = "Add to Albums",
-                    tint = Color(0xFF1E1E1E),
+                    imageVector = if (isSaved) Icons.Filled.Favorite else Icons.Outlined.Add,
+                    contentDescription = if (isSaved) "Remove from Albums" else "Add to Albums",
+                    tint = if (isSaved) InnieGreen else Color(0xFF1E1E1E),
                     modifier = Modifier.size(20.dp)
                 )
                 Text(
-                    text = "Add to Albums",
+                    text = if (isSaved) "Saved" else "Add to Albums",
                     fontSize = 8.sp,
                     color = InnieGreen,
                     fontWeight = FontWeight.Bold

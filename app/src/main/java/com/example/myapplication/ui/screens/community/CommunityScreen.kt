@@ -30,9 +30,11 @@ import coil.compose.AsyncImage
 import com.example.myapplication.data.local.db.DatabaseProvider
 import com.example.myapplication.data.local.entities.ReviewWithMovie
 import com.example.myapplication.data.repository.ReviewRepository
+import com.example.myapplication.data.repository.SocialRepository
 import com.example.myapplication.data.session.UserSessionManager
 import com.example.myapplication.ui.navigation.Screen
 import com.example.myapplication.ui.theme.*
+import kotlinx.coroutines.flow.first
 
 // Enum cho Tab điều hướng phía trên - 3 tabs
 enum class CommunityTopTap(val title: String) {
@@ -47,10 +49,12 @@ fun CommunityContent(
     navController: NavController
 ) {
     val context = LocalContext.current
+    val currentUserId = UserSessionManager.getUserId()
     
-    // Get database and repository
+    // Get database and repositories
     val database = remember { DatabaseProvider.getDatabase(context) }
     val reviewRepository = remember { ReviewRepository(database.reviewDao()) }
+    val socialRepository = remember { SocialRepository(database.socialDao()) }
     
     var selectedTab by remember { mutableIntStateOf(1) } // Default to "For you"
     val tabs = CommunityTopTap.entries
@@ -58,10 +62,19 @@ fun CommunityContent(
     // Load reviews from database for "For you" tab
     val forYouReviews by reviewRepository.getRecentReviewsWithMovies(20).collectAsState(initial = emptyList())
     
-    // Following and Friends - empty by default (user hasn't followed/added anyone)
-    // In real app, these would come from a Follow/Friend relationship table
-    val followingReviews = emptyList<ReviewWithMovie>() // Empty - no one followed
-    val friendsReviews = emptyList<ReviewWithMovie>() // Empty - no friends added
+    // Following reviews - dynamically fetched based on who current user follows
+    val followingUserIds by socialRepository.getFollowing(currentUserId).collectAsState(initial = emptyList())
+    val followingReviews by remember(followingUserIds) {
+        if (followingUserIds.isEmpty()) {
+            kotlinx.coroutines.flow.flowOf(emptyList<ReviewWithMovie>())
+        } else {
+            database.reviewDao().getReviewsByAuthorsWithMovies(followingUserIds, 50)
+        }
+    }.collectAsState(initial = emptyList())
+    
+    // Friends reviews - dynamically fetch friends and their reviews
+    val friendIds by remember { kotlinx.coroutines.flow.flowOf(emptyList<String>()) }.collectAsState(initial = emptyList()) // TODO: Add getFriends query
+    val friendsReviews = emptyList<ReviewWithMovie>() // Empty for now
 
     Column(
         modifier = modifier

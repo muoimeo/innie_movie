@@ -37,9 +37,12 @@ import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -78,6 +81,7 @@ import com.example.myapplication.ui.navigation.Screen
 import com.example.myapplication.ui.theme.InnieGreen
 import kotlinx.coroutines.delay
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ShotsFeed(
     navController: NavController? = null,
@@ -86,6 +90,7 @@ fun ShotsFeed(
     val shots by shotsViewModel.shots.collectAsState()
     val isLoading by shotsViewModel.isLoading.collectAsState()
     val relatedMovies by shotsViewModel.relatedMovies.collectAsState()
+    val isRefreshing by shotsViewModel.isRefreshing.collectAsState()
     
     if (isLoading || shots.isEmpty()) {
         Box(
@@ -97,37 +102,58 @@ fun ShotsFeed(
         return
     }
     
+    // Use finite pager starting at 0 (can't scroll up past first video)
     val pagerState = rememberPagerState(
-        initialPage = Int.MAX_VALUE / 2,
-        pageCount = { Int.MAX_VALUE }
+        initialPage = 0,
+        pageCount = { shots.size }
     )
     
     // Collect liked shots as state for reactivity
     val likedShotsSet by shotsViewModel.likedShots.collectAsState()
     
-    VerticalPager(
-        state = pagerState,
+    // Pull-to-refresh state
+    val pullToRefreshState = rememberPullToRefreshState()
+    
+    // Handle pull-to-refresh when at top
+    LaunchedEffect(pullToRefreshState.distanceFraction) {
+        if (pullToRefreshState.distanceFraction > 0 && pagerState.currentPage == 0) {
+            // User is pulling down on first page
+        }
+    }
+    
+    Box(
         modifier = Modifier.fillMaxSize()
-    ) { page ->
-        val actualIndex = page % shots.size
-        val shot = shots[actualIndex]
-        val relatedMovie = shot.relatedMovieId?.let { relatedMovies[it] }
-        val localVideoResId = shotLocalVideoMap[shot.id]
-        
-        // Use collected state for reactivity
-        val isLiked = likedShotsSet.contains(shot.id)
-        
-        ShotItem(
-            shot = shot,
-            relatedMovie = relatedMovie,
-            isCurrentPage = pagerState.currentPage == page,
-            localVideoResId = localVideoResId,
-            isLiked = isLiked,
-            onLikeClick = { shotsViewModel.toggleLike(shot.id) },
-            onMovieClick = { movieId ->
-                navController?.navigate(Screen.MoviePage.createRoute(movieId))
+    ) {
+        PullToRefreshBox(
+            isRefreshing = isRefreshing,
+            onRefresh = { shotsViewModel.refresh() },
+            state = pullToRefreshState,
+            modifier = Modifier.fillMaxSize()
+        ) {
+            VerticalPager(
+                state = pagerState,
+                modifier = Modifier.fillMaxSize()
+            ) { page ->
+                val shot = shots[page]
+                val relatedMovie = shot.relatedMovieId?.let { relatedMovies[it] }
+                val localVideoResId = shotLocalVideoMap[shot.id]
+                
+                // Use collected state for reactivity
+                val isLiked = likedShotsSet.contains(shot.id)
+                
+                ShotItem(
+                    shot = shot,
+                    relatedMovie = relatedMovie,
+                    isCurrentPage = pagerState.currentPage == page,
+                    localVideoResId = localVideoResId,
+                    isLiked = isLiked,
+                    onLikeClick = { shotsViewModel.toggleLike(shot.id) },
+                    onMovieClick = { movieId ->
+                        navController?.navigate(Screen.MoviePage.createRoute(movieId))
+                    }
+                )
             }
-        )
+        }
     }
 }
 

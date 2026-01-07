@@ -1,6 +1,7 @@
 package com.example.myapplication.ui.screens.search
 
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,84 +19,94 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.LocalOverscrollConfiguration
+import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import com.example.myapplication.data.local.db.DatabaseProvider
+import com.example.myapplication.data.local.entities.Movie
+import com.example.myapplication.ui.navigation.Screen
+import com.example.myapplication.ui.theme.InnieGreen
 
-// Data class
-data class MovieItem(
-    val title: String,
-    val icon: ImageVector = Icons.Default.Search,
-    val country: String = "USA",
-    val contentType: String = "Movie",
-    val genre: String = "Action",
-    val version: String = "Original",
-    val releaseYear: String = "2024"
-)
-
-// Sample Data
-val mostSearchedMovies = listOf(
-    MovieItem("Stranger Things", country = "USA", contentType = "TV Series", genre = "Sci-Fi", releaseYear = "2022"),
-    MovieItem("Black Phone 2", country = "USA", contentType = "Movie", genre = "Horror", releaseYear = "2024"),
-    MovieItem("Predator: Badlands", country = "USA", contentType = "Movie", genre = "Action", releaseYear = "2024"),
-    MovieItem("Avatar: Fire and Ash", country = "USA", contentType = "Movie", genre = "Sci-Fi", releaseYear = "2024"),
-    MovieItem("Frankenstein", country = "UK", contentType = "Movie", genre = "Horror", releaseYear = "2024"),
-    MovieItem("Five Nights at Freddy's 2", country = "USA", contentType = "Movie", genre = "Horror", releaseYear = "2024"),
-    MovieItem("The Conjuring: Last Rites", country = "USA", contentType = "Movie", genre = "Horror", releaseYear = "2024"),
-    MovieItem("Zootopia 2", country = "USA", contentType = "Animation", genre = "Comedy", releaseYear = "2024"),
-    MovieItem("Deadpool and Wolverine", country = "USA", contentType = "Movie", genre = "Action", releaseYear = "2024"),
-    MovieItem("Pluribus", country = "France", contentType = "Documentary", genre = "Drama", releaseYear = "2023"),
-    MovieItem("Breaking Bad", country = "USA", contentType = "TV Series", genre = "Crime", releaseYear = "2010s"),
-    MovieItem("The Witcher", country = "USA", contentType = "TV Series", genre = "Fantasy", releaseYear = "2019"),
-    MovieItem("Gladiator II", country = "USA", contentType = "Movie", genre = "Action", releaseYear = "2024"),
-    MovieItem("Wicked", country = "USA", contentType = "Movie", genre = "Musical", releaseYear = "2024"),
-    MovieItem("Moana 2", country = "USA", contentType = "Animation", genre = "Adventure", releaseYear = "2024"),
-    MovieItem("Mufasa: The Lion King", country = "USA", contentType = "Animation", genre = "Adventure", releaseYear = "2024"),
-    MovieItem("Sonic the Hedgehog 3", country = "USA", contentType = "Movie", genre = "Action", releaseYear = "2024"),
-    MovieItem("Kraven the Hunter", country = "USA", contentType = "Movie", genre = "Action", releaseYear = "2024"),
-    MovieItem("The Lord of the Rings: The War of the Rohirrim", country = "USA", contentType = "Animation", genre = "Fantasy", releaseYear = "2024"),
-    MovieItem("Nosferatu", country = "USA", contentType = "Movie", genre = "Horror", releaseYear = "2024"),
-    MovieItem("A Minecraft Movie", country = "USA", contentType = "Movie", genre = "Fantasy", releaseYear = "2025"),
-    MovieItem("Captain America: Brave New World", country = "USA", contentType = "Movie", genre = "Action", releaseYear = "2025")
-)
-
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
-fun SearchScreen() {
+fun SearchScreen(
+    navController: NavController? = null,
+    isAddMode: Boolean = false,
+    onMovieSelected: ((Int) -> Unit)? = null
+) {
+    val context = LocalContext.current
+    val database = remember { DatabaseProvider.getDatabase(context) }
+    
     var searchQuery by remember { mutableStateOf("") }
     var isFocused by remember { mutableStateOf(false) }
     var showFilterSheet by remember { mutableStateOf(false) }
     var filterState by remember { mutableStateOf(FilterState()) }
 
-    // Filter movies based on search query (starts with) AND filter state
-    val filteredMovies = remember(searchQuery, filterState) {
-        mostSearchedMovies.filter { movie ->
-            // Search Query Logic
-            val matchesSearch = if (searchQuery.isEmpty()) true else movie.title.lowercase().startsWith(searchQuery.lowercase())
+    // Load ALL movies from database
+    val allMovies by database.movieDao().getAllMovies().collectAsState(initial = emptyList())
+    
+    // Filter movies based on search query and filter state
+    val filteredMovies = remember(searchQuery, filterState, allMovies) {
+        allMovies.filter { movie ->
+            // Search Query Logic - title contains query (case insensitive)
+            val matchesSearch = if (searchQuery.isEmpty()) true 
+                else movie.title.lowercase().contains(searchQuery.lowercase())
 
-            // Filter Logic
-            val matchesCountry = filterState.selectedCountries.isEmpty() || filterState.selectedCountries.contains(movie.country)
-            val matchesType = filterState.selectedContentTypes.isEmpty() || filterState.selectedContentTypes.contains(movie.contentType)
-            val matchesGenre = filterState.selectedGenres.isEmpty() || filterState.selectedGenres.contains(movie.genre)
-            val matchesVersion = filterState.selectedVersions.isEmpty() || filterState.selectedVersions.contains(movie.version)
-            val matchesYear = filterState.selectedYears.isEmpty() || filterState.selectedYears.contains(movie.releaseYear)
+            // Media Type filter
+            val matchesMediaType = filterState.selectedMediaTypes.isEmpty() ||
+                filterState.selectedMediaTypes.any { type ->
+                    movie.mediaType.equals(type, ignoreCase = true)
+                }
 
-            matchesSearch && matchesCountry && matchesType && matchesGenre && matchesVersion && matchesYear
+            // Genre filter - check if movie's genres contain any selected genre
+            val matchesGenre = filterState.selectedGenres.isEmpty() || 
+                filterState.selectedGenres.any { genre -> 
+                    movie.genres?.contains(genre, ignoreCase = true) == true 
+                }
+            
+            // Year filter - check if movie's year matches
+            val matchesYear = filterState.selectedYears.isEmpty() ||
+                filterState.selectedYears.any { yearFilter ->
+                    when {
+                        yearFilter == "2024" -> movie.year == 2024
+                        yearFilter == "2023" -> movie.year == 2023
+                        yearFilter == "2022" -> movie.year == 2022
+                        yearFilter == "2021" -> movie.year == 2021
+                        yearFilter == "2020" -> movie.year == 2020
+                        yearFilter == "2019" -> movie.year == 2019
+                        yearFilter == "2010s" -> movie.year in 2010..2019
+                        yearFilter == "2000s" -> movie.year in 2000..2009
+                        yearFilter == "1990s" -> movie.year in 1990..1999
+                        yearFilter == "Older" -> (movie.year ?: 0) < 1990
+                        else -> false
+                    }
+                }
+
+            // Rating filter
+            val matchesRating = if (filterState.minRating == "Any") true
+            else {
+                val minVal = filterState.minRating.replace("+", "").toFloatOrNull() ?: 0f
+                movie.rating >= minVal
+            }
+
+            matchesSearch && matchesMediaType && matchesGenre && matchesYear && matchesRating
         }.let { list ->
             // Sort Logic
             when (filterState.selectedSort) {
                 "A-Z" -> list.sortedBy { it.title }
                 "Z-A" -> list.sortedByDescending { it.title }
-                // For simplified demo, other sorts act as default order or could be implemented if data supported it
+                "Newest" -> list.sortedByDescending { it.year }
+                "Oldest" -> list.sortedBy { it.year }
+                "Rating" -> list.sortedByDescending { it.rating }
+                "Popular" -> list.sortedByDescending { it.rating } // Fallback to rating
                 else -> list
             }
         }
@@ -106,10 +117,7 @@ fun SearchScreen() {
         FilterBottomSheet(
             filterState = filterState,
             onFilterChange = { filterState = it },
-            onApplyFilter = {
-                showFilterSheet = false
-                // TODO: Apply filter logic to movie list
-            },
+            onApplyFilter = { showFilterSheet = false },
             onDismiss = { showFilterSheet = false }
         )
     }
@@ -121,6 +129,23 @@ fun SearchScreen() {
             .padding(horizontal = 16.dp)
     ) {
         Spacer(modifier = Modifier.height(30.dp))
+        
+        // Add Mode Header
+        if (isAddMode) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Select a movie to add to favorites",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = InnieGreen
+                )
+            }
+        }
 
         // Search Bar + Filter Button Row
         SearchBarWithFilter(
@@ -135,7 +160,7 @@ fun SearchScreen() {
 
         // Title - changes based on search state
         Text(
-            text = if (searchQuery.isEmpty()) "Most searched" else "Results for \"$searchQuery\"",
+            text = if (searchQuery.isEmpty()) "All Movies" else "Results for \"$searchQuery\"",
             fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
             color = Color.Black
@@ -147,21 +172,18 @@ fun SearchScreen() {
         if (filteredMovies.isEmpty()) {
             Box(
                 modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 32.dp),
+                    .fillMaxWidth()
+                    .padding(top = 32.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "No movies found for \"$searchQuery\"",
+                    text = if (searchQuery.isEmpty()) "No movies in database" else "No movies found for \"$searchQuery\"",
                     fontSize = 14.sp,
                     color = Color.Gray
                 )
             }
         } else {
-
-            // Movie Grid - 3 columns
-            // Disable overscroll stretch effect
-            @OptIn(ExperimentalFoundationApi::class)
+            // Movie Grid - 3 columns using actual database movies
             CompositionLocalProvider(
                 LocalOverscrollConfiguration provides null
             ) {
@@ -169,16 +191,26 @@ fun SearchScreen() {
                     columns = GridCells.Fixed(3),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(bottom = 120.dp), // Add padding for bottom nav
+                    contentPadding = PaddingValues(bottom = 120.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
                     items(filteredMovies) { movie ->
-                        MovieGridItem(movie = movie)
+                        MovieGridItemDb(
+                            movie = movie,
+                            onClick = {
+                                if (isAddMode && onMovieSelected != null) {
+                                    // Add mode: call callback to add to favorites
+                                    onMovieSelected(movie.id)
+                                } else {
+                                    // Normal mode: navigate to movie page
+                                    navController?.navigate(Screen.MoviePage.createRoute(movie.id))
+                                }
+                            }
+                        )
                     }
                 }
             }
         }
-
     }
 }
 
@@ -248,14 +280,14 @@ fun SearchBarWithFilter(
 
         Spacer(modifier = Modifier.width(10.dp))
 
-        // Filter Button
+        // Filter Button with InnieGreen accent
         Box(
             modifier = Modifier
                 .height(40.dp)
                 .clip(RoundedCornerShape(8.dp))
                 .border(
                     width = 1.dp,
-                    color = Color(0xFFE0E0E0),
+                    color = InnieGreen,
                     shape = RoundedCornerShape(8.dp)
                 )
                 .background(Color.White)
@@ -269,14 +301,15 @@ fun SearchBarWithFilter(
                 Icon(
                     imageVector = Icons.Outlined.Tune,
                     contentDescription = "Filter",
-                    tint = Color.DarkGray,
+                    tint = InnieGreen,
                     modifier = Modifier.size(18.dp)
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "Filter",
                     fontSize = 14.sp,
-                    color = Color.DarkGray
+                    color = InnieGreen,
+                    fontWeight = FontWeight.Medium
                 )
             }
         }
@@ -284,26 +317,26 @@ fun SearchBarWithFilter(
 }
 
 @Composable
-fun MovieGridItem(movie: MovieItem) {
+fun MovieGridItemDb(
+    movie: Movie,
+    onClick: () -> Unit
+) {
     Column(
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
     ) {
-        // Movie Poster
-        Box(
+        // Movie Poster using Coil
+        AsyncImage(
+            model = movie.posterUrl,
+            contentDescription = movie.title,
+            contentScale = ContentScale.Crop,
             modifier = Modifier
                 .fillMaxWidth()
                 .aspectRatio(2f / 3f)
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color.LightGray),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = movie.icon,
-                contentDescription = movie.title,
-                tint = Color.White,
-                modifier = Modifier.size(40.dp)
-            )
-        }
+                .background(Color.LightGray)
+        )
 
         Spacer(modifier = Modifier.height(6.dp))
 
@@ -316,5 +349,14 @@ fun MovieGridItem(movie: MovieItem) {
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
+        
+        // Movie Year
+        movie.year?.let { year ->
+            Text(
+                text = year.toString(),
+                fontSize = 10.sp,
+                color = Color.Gray
+            )
+        }
     }
 }

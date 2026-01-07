@@ -106,4 +106,47 @@ class ShotsViewModel(application: Application) : AndroidViewModel(application) {
     }
     
     fun isLiked(shotId: Int): Boolean = _likedShots.value.contains(shotId)
+    
+    // Refresh state for pull-to-refresh
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+    
+    /**
+     * Refresh shots data - called by pull-to-refresh
+     */
+    fun refresh() {
+        viewModelScope.launch {
+            _isRefreshing.value = true
+            
+            // Force reseed to get fresh data
+            shotRepository.forceReseed()
+            
+            // Reload shots
+            shotRepository.getAllShots().collect { shotsList ->
+                _shots.value = shotsList
+                
+                // Pre-load related movies
+                val movieMap = mutableMapOf<Int, Movie?>()
+                shotsList.forEach { shot ->
+                    shot.relatedMovieId?.let { movieId ->
+                        if (!movieMap.containsKey(movieId)) {
+                            movieMap[movieId] = shotRepository.getRelatedMovie(movieId)
+                        }
+                    }
+                }
+                _relatedMovies.value = movieMap
+                
+                // Load liked status for all shots
+                val liked = mutableSetOf<Int>()
+                shotsList.forEach { shot ->
+                    if (likeRepository.isLiked(currentUserId, "shot", shot.id)) {
+                        liked.add(shot.id)
+                    }
+                }
+                _likedShots.value = liked
+                
+                _isRefreshing.value = false
+            }
+        }
+    }
 }
