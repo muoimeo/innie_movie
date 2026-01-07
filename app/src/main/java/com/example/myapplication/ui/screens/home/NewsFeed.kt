@@ -36,6 +36,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.myapplication.data.local.entities.News
 import com.example.myapplication.ui.theme.InnieGreen
+import androidx.compose.ui.zIndex
 import kotlin.math.roundToInt
 
 @Composable
@@ -47,6 +48,8 @@ fun NewsFeed(
     val news by newsViewModel.news.collectAsState()
     val isLoading by newsViewModel.isLoading.collectAsState()
     var searchQuery by remember { mutableStateOf("") }
+    var showFilterSheet by remember { mutableStateOf(false) }
+    var newsFilterState by remember { mutableStateOf(NewsFilterState()) }
     
     // Collapsing search bar logic
     val searchBarHeight = 60.dp
@@ -66,6 +69,19 @@ fun NewsFeed(
         }
     }
     
+    // Show filter bottom sheet
+    if (showFilterSheet) {
+        NewsFilterBottomSheet(
+            filterState = newsFilterState,
+            onFilterChange = { newsFilterState = it },
+            onApplyFilter = {
+                showFilterSheet = false
+                // TODO: Apply filter logic to news list via ViewModel
+            },
+            onDismiss = { showFilterSheet = false }
+        )
+    }
+    
     if (isLoading) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -76,21 +92,37 @@ fun NewsFeed(
         return
     }
     
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .nestedScroll(nestedScrollConnection)
-    ) {
+    Scaffold(
+        topBar = {
+            if (!showHeroFullScreen) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFFF8F9FA)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        SearchAndFilterBar(
+                            searchQuery = searchQuery,
+                            onSearchChange = { 
+                                searchQuery = it
+                                newsViewModel.searchNews(it)
+                            },
+                            onFilterClick = { showFilterSheet = true }
+                        )
+                    }
+                }
+            }
+        },
+        containerColor = Color(0xFFF8F9FA)
+    ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF8F9FA)),
-            // When showing fullscreen hero, no top padding needed (hero fills to top)
-            // Otherwise, add space for collapsing search bar
-            contentPadding = PaddingValues(
-                top = if (showHeroFullScreen) 0.dp else searchBarHeight + 8.dp, 
-                bottom = 100.dp
-            )
+                .padding(paddingValues),
+            contentPadding = PaddingValues(bottom = 100.dp)
         ) {
             // Featured Hero Section - use first news item
             item {
@@ -120,26 +152,6 @@ fun NewsFeed(
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
                     thickness = 0.5.dp,
                     color = Color.LightGray.copy(alpha = 0.5f)
-                )
-            }
-        }
-        
-        // Collapsible Search Bar (pinned to top)
-        if (!showHeroFullScreen) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(searchBarHeight)
-                    .offset { IntOffset(0, searchBarOffsetHeightPx.roundToInt()) }
-                    .background(Color(0xFFF8F9FA)) // Match background to hide content behind
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                SearchAndFilterBar(
-                    searchQuery = searchQuery,
-                    onSearchChange = { 
-                        searchQuery = it
-                        newsViewModel.searchNews(it)
-                    }
                 )
             }
         }
@@ -335,7 +347,8 @@ fun NewsArticleCard(
 @Composable
 fun SearchAndFilterBar(
     searchQuery: String,
-    onSearchChange: (String) -> Unit
+    onSearchChange: (String) -> Unit,
+    onFilterClick: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -391,7 +404,7 @@ fun SearchAndFilterBar(
                 .size(44.dp)
                 .background(Color.White, CircleShape)
                 .border(1.dp, Color(0xFFE0E0E0), CircleShape)
-                .clickable { /* Filter logic */ },
+                .clickable { onFilterClick() },
             contentAlignment = Alignment.Center
         ) {
             Icon(
