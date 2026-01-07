@@ -68,7 +68,7 @@ fun ProfileScreen(
                 drawerContainerColor = Color.White,
                 drawerShape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
             ) {
-                ProfileSideMenuContent(user, navController, drawerState, scope)
+                ProfileSideMenuContent(displayName, username, navController, drawerState, scope)
             }
         }
     ) {
@@ -438,24 +438,34 @@ fun HorizontalFilmSection(
 }
     @Composable
     fun ProfileSideMenuContent(
-        user: UserProfile,
+        displayName: String,
+        username: String,
         navController: NavController,
         drawerState: DrawerState,
         scope: CoroutineScope
     ) {
         Column(modifier = Modifier.fillMaxHeight().padding(24.dp)) {
-            // User info header
+            // User info header - using ViewModel data
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Image(
-                    painter = painterResource(id = user.avatarRes),
-                    contentDescription = null,
-                    modifier = Modifier.size(56.dp).clip(CircleShape),
-                    contentScale = ContentScale.Crop
-                )
+                // Default person icon avatar
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF4A5568)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Avatar",
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
-                    Text(user.name, fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                    Text(user.username, color = Color.Gray, fontSize = 14.sp)
+                    Text(displayName, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                    Text(username, color = Color.Gray, fontSize = 14.sp)
                 }
             }
             Spacer(modifier = Modifier.height(32.dp))

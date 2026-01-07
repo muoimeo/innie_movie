@@ -7,6 +7,7 @@ import com.example.myapplication.data.local.dao.CommentDao
 import com.example.myapplication.data.local.dao.LikeDao
 import com.example.myapplication.data.local.dao.MovieDao
 import com.example.myapplication.data.local.dao.NewsDao
+import com.example.myapplication.data.local.dao.ReviewDao
 import com.example.myapplication.data.local.dao.ShotDao
 import com.example.myapplication.data.local.dao.UserActivityDao
 import com.example.myapplication.data.local.dao.UserDao
@@ -19,6 +20,7 @@ import com.example.myapplication.data.local.entities.Comment
 import com.example.myapplication.data.local.entities.Like
 import com.example.myapplication.data.local.entities.Movie
 import com.example.myapplication.data.local.entities.News
+import com.example.myapplication.data.local.entities.Review
 import com.example.myapplication.data.local.entities.Shot
 import com.example.myapplication.data.local.entities.User
 import com.example.myapplication.data.local.entities.UserActivity
@@ -36,6 +38,7 @@ import com.example.myapplication.data.local.entities.WatchlistItem
         AlbumMovie::class,
         News::class,
         Shot::class,
+        Review::class,
         // User data entities
         UserSettings::class,
         UserMovieStats::class,
@@ -45,7 +48,7 @@ import com.example.myapplication.data.local.entities.WatchlistItem
         UserActivity::class,
         Comment::class
     ],
-    version = 10,  // Removed User FK constraints for guest/dev mode
+    version = 11,  // Added Review entity
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -55,6 +58,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun albumDao(): AlbumDao
     abstract fun newsDao(): NewsDao
     abstract fun shotDao(): ShotDao
+    abstract fun reviewDao(): ReviewDao
     
     // User data DAOs
     abstract fun userSettingsDao(): UserSettingsDao
