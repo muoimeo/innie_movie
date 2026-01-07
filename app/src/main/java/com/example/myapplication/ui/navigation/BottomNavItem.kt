@@ -67,6 +67,13 @@ sealed class BottomNavItem(
 }
 
 sealed class Profile(val route: String) {
+    data object Account : Profile("account")
+    data object NotificationSettings : Profile("notification_settings")
+    data object HelpSupport : Profile("help_support")
+    data object About : Profile("about")
+    data object TermsOfUse : Profile("terms_of_use")
+    data object PrivacyPolicy : Profile("privacy_policy")
+    data object ThirdPartyNotices : Profile("third_party_notices")
     data object WatchHistory : Profile("WatchHistory")
     data object Likes : Profile("likes")
     data object Watchlist : Profile("watchlist")
