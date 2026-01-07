@@ -2,6 +2,7 @@ package com.example.myapplication.data.local.dao
 
 import androidx.room.*
 import com.example.myapplication.data.local.entities.Review
+import com.example.myapplication.data.local.entities.ReviewWithMovie
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -54,4 +55,20 @@ interface ReviewDao {
     // Get recent reviews (for community feed)
     @Query("SELECT * FROM reviews ORDER BY createdAt DESC LIMIT :limit")
     fun getRecentReviews(limit: Int): Flow<List<Review>>
+        
+    // Get reviews with movie info for a specific movie
+    @Transaction
+    @Query("SELECT * FROM reviews WHERE movieId = :movieId ORDER BY createdAt DESC")
+    fun getReviewsWithMovies(movieId: Int): Flow<List<ReviewWithMovie>>
+    
+    // Get recent reviews with movie info (for community feed)
+    @Transaction
+    @Query("SELECT * FROM reviews ORDER BY createdAt DESC LIMIT :limit")
+    fun getRecentReviewsWithMovies(limit: Int): Flow<List<ReviewWithMovie>>
+    
+    // Get reviews by user with movie info
+    @Transaction
+    @Query("SELECT * FROM reviews WHERE authorId = :userId ORDER BY createdAt DESC")
+    fun getReviewsByUserWithMovies(userId: String): Flow<List<ReviewWithMovie>>
 }
+

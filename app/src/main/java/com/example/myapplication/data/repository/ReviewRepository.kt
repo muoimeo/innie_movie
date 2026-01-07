@@ -2,6 +2,7 @@ package com.example.myapplication.data.repository
 
 import com.example.myapplication.data.local.dao.ReviewDao
 import com.example.myapplication.data.local.entities.Review
+import com.example.myapplication.data.local.entities.ReviewWithMovie
 import kotlinx.coroutines.flow.Flow
 
 class ReviewRepository(private val dao: ReviewDao) {
@@ -59,4 +60,16 @@ class ReviewRepository(private val dao: ReviewDao) {
     
     // Community feed
     fun getRecentReviews(limit: Int = 20): Flow<List<Review>> = dao.getRecentReviews(limit)
+    
+    // === Reviews with Movie data (for UI display) ===
+    
+    fun getReviewsWithMovies(movieId: Int): Flow<List<ReviewWithMovie>> = 
+        dao.getReviewsWithMovies(movieId)
+    
+    fun getRecentReviewsWithMovies(limit: Int = 20): Flow<List<ReviewWithMovie>> = 
+        dao.getRecentReviewsWithMovies(limit)
+    
+    fun getReviewsByUserWithMovies(userId: String): Flow<List<ReviewWithMovie>> = 
+        dao.getReviewsByUserWithMovies(userId)
 }
+

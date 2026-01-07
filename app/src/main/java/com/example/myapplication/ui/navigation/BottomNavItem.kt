@@ -1,10 +1,12 @@
 package com.example.myapplication.ui.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.Groups
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
@@ -27,8 +29,8 @@ sealed class BottomNavItem(
     data object Community : BottomNavItem(
         route = "community_tab",
         label = "Community",
-        selectedIcon = Icons.Filled.Person, 
-        unselectedIcon = Icons.Outlined.Person
+        selectedIcon = Icons.Filled.Groups, 
+        unselectedIcon = Icons.Outlined.Groups
     )
 
     

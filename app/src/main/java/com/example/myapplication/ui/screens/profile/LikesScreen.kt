@@ -3,6 +3,7 @@ package com.example.myapplication.ui.screens.profile
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -27,6 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.myapplication.ui.navigation.Screen
 import com.example.myapplication.ui.theme.InnieGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -43,8 +45,10 @@ fun LikesScreen(
     val albumCount by likesViewModel.albumCount.collectAsState()
     val shotCount by likesViewModel.shotCount.collectAsState()
     val newsCount by likesViewModel.newsCount.collectAsState()
+    val reviewCount by likesViewModel.reviewCount.collectAsState()
     
-    val filters = listOf("All", "Movies", "Albums", "Shots", "News")
+    // Added Reviews filter
+    val filters = listOf("All", "Movies", "Albums", "Shots", "News", "Reviews")
     
     // Get filtered items based on selection
     val displayItems = remember(selectedFilter, allLikes) {
@@ -72,14 +76,13 @@ fun LikesScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
-            // Filter chips
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
+            // Filter chips - scrollable
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                filters.forEach { filter ->
+                items(filters) { filter ->
                     FilterChip(
                         selected = selectedFilter == filter,
                         onClick = { selectedFilter = filter },
@@ -95,17 +98,17 @@ fun LikesScreen(
             
             Spacer(modifier = Modifier.height(8.dp))
             
-            // Stats summary - real counts from database
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            // Stats summary - real counts from database (now with Reviews)
+            LazyRow(
+                modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                LikeStatCard(count = movieCount, label = "Movies", modifier = Modifier.weight(1f))
-                LikeStatCard(count = albumCount, label = "Albums", modifier = Modifier.weight(1f))
-                LikeStatCard(count = shotCount, label = "Shots", modifier = Modifier.weight(1f))
-                LikeStatCard(count = newsCount, label = "News", modifier = Modifier.weight(1f))
+                item { LikeStatCard(count = movieCount, label = "Movies") }
+                item { LikeStatCard(count = albumCount, label = "Albums") }
+                item { LikeStatCard(count = shotCount, label = "Shots") }
+                item { LikeStatCard(count = newsCount, label = "News") }
+                item { LikeStatCard(count = reviewCount, label = "Reviews") }
             }
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -140,7 +143,7 @@ fun LikesScreen(
                             color = Color.Gray
                         )
                         Text(
-                            text = "Like movies, albums, shots or news\nto see them here",
+                            text = "Like movies, albums, shots, news or reviews\nto see them here",
                             fontSize = 14.sp,
                             color = Color.LightGray,
                             textAlign = TextAlign.Center
@@ -148,7 +151,7 @@ fun LikesScreen(
                     }
                 }
             } else if (selectedFilter == "All") {
-                // NEW: Horizontal rows for All tab
+                // Horizontal rows for All tab
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -162,7 +165,8 @@ fun LikesScreen(
                             title = "Movies",
                             items = movies.take(5),
                             hasMore = movies.size > 5,
-                            onMoreClick = { selectedFilter = "Movies" }
+                            onMoreClick = { selectedFilter = "Movies" },
+                            navController = navController
                         )
                     }
                     
@@ -173,7 +177,8 @@ fun LikesScreen(
                             title = "Albums",
                             items = albums.take(5),
                             hasMore = albums.size > 5,
-                            onMoreClick = { selectedFilter = "Albums" }
+                            onMoreClick = { selectedFilter = "Albums" },
+                            navController = navController
                         )
                     }
                     
@@ -184,7 +189,8 @@ fun LikesScreen(
                             title = "Shots",
                             items = shots.take(5),
                             hasMore = shots.size > 5,
-                            onMoreClick = { selectedFilter = "Shots" }
+                            onMoreClick = { selectedFilter = "Shots" },
+                            navController = navController
                         )
                     }
                     
@@ -195,7 +201,20 @@ fun LikesScreen(
                             title = "News",
                             items = news.take(5),
                             hasMore = news.size > 5,
-                            onMoreClick = { selectedFilter = "News" }
+                            onMoreClick = { selectedFilter = "News" },
+                            navController = navController
+                        )
+                    }
+                    
+                    // Reviews row - special display
+                    val reviews = likesViewModel.getFilteredLikes("Reviews")
+                    if (reviews.isNotEmpty()) {
+                        LikesReviewRow(
+                            title = "Reviews",
+                            items = reviews.filterIsInstance<LikedContent.LikedReview>().take(3),
+                            hasMore = reviews.size > 3,
+                            onMoreClick = { selectedFilter = "Reviews" },
+                            navController = navController
                         )
                     }
                     
@@ -225,8 +244,27 @@ fun LikesScreen(
                         )
                     }
                 }
+            } else if (selectedFilter == "Reviews") {
+                // Reviews list - vertical cards
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp)
+                ) {
+                    displayItems.filterIsInstance<LikedContent.LikedReview>().forEach { review ->
+                        LikedReviewCard(
+                            review = review,
+                            onClick = {
+                                navController.navigate(Screen.ReviewDetail.createRoute(review.id))
+                            }
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
+                    Spacer(modifier = Modifier.height(80.dp))
+                }
             } else {
-                // Liked content grid for specific category tabs
+                // Grid for Movies, Albums, Shots, News
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -239,7 +277,14 @@ fun LikesScreen(
                             posterUrl = item.imageUrl,
                             title = item.title,
                             type = item.type,
-                            onClick = { /* Navigate to detail */ }
+                            onClick = {
+                                when (item) {
+                                    is LikedContent.LikedMovie -> navController.navigate(Screen.MoviePage.createRoute(item.id))
+                                    is LikedContent.LikedNews -> navController.navigate(Screen.NewsDetail.createRoute(item.id))
+                                    is LikedContent.LikedAlbum -> navController.navigate(Screen.AlbumDetail.createRoute(item.id))
+                                    else -> { /* TODO: Shots detail */ }
+                                }
+                            }
                         )
                     }
                 }
@@ -249,14 +294,261 @@ fun LikesScreen(
 }
 
 /**
- * Horizontal row for a category in All tab
+ * Special row for Reviews in All tab
+ */
+@Composable
+private fun LikesReviewRow(
+    title: String,
+    items: List<LikedContent.LikedReview>,
+    hasMore: Boolean,
+    onMoreClick: () -> Unit,
+    navController: NavController
+) {
+    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+        // Header
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+            if (hasMore) {
+                Text(
+                    text = "See All",
+                    fontSize = 12.sp,
+                    color = InnieGreen,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.clickable { onMoreClick() }
+                )
+            }
+        }
+        
+        Spacer(modifier = Modifier.height(12.dp))
+        
+        // Review cards
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items.forEach { review ->
+                LikedReviewCardCompact(
+                    review = review,
+                    onClick = {
+                        navController.navigate(Screen.ReviewDetail.createRoute(review.id))
+                    }
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Compact review card for All tab horizontal row
+ */
+@Composable
+private fun LikedReviewCardCompact(
+    review: LikedContent.LikedReview,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F8F8)),
+        elevation = CardDefaults.cardElevation(1.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.Top
+        ) {
+            // Review icon
+            Icon(
+                imageVector = Icons.Default.RateReview,
+                contentDescription = null,
+                tint = InnieGreen,
+                modifier = Modifier.size(20.dp)
+            )
+            
+            Spacer(modifier = Modifier.width(12.dp))
+            
+            Column(modifier = Modifier.weight(1f)) {
+                // Movie title
+                Text(
+                    text = review.movieTitle,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                
+                // Author
+                Text(
+                    text = "by ${review.authorName}",
+                    fontSize = 11.sp,
+                    color = InnieGreen
+                )
+                
+                // Review snippet
+                Text(
+                    text = review.reviewBody,
+                    fontSize = 11.sp,
+                    color = Color.Gray,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+            
+            // Rating if exists
+            review.rating?.let { rating ->
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(start = 8.dp)
+                ) {
+                    Text(
+                        text = String.format("%.1f", rating),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = InnieGreen
+                    )
+                    Text("★", color = InnieGreen, fontSize = 12.sp)
+                }
+            }
+            
+            // Like icon
+            Icon(
+                imageVector = Icons.Default.Favorite,
+                contentDescription = "Liked",
+                tint = Color.Red,
+                modifier = Modifier
+                    .padding(start = 8.dp)
+                    .size(14.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Full review card for Reviews tab
+ */
+@Composable
+private fun LikedReviewCard(
+    review: LikedContent.LikedReview,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F8F8)),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Review icon + title
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.RateReview,
+                        contentDescription = null,
+                        tint = InnieGreen,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = review.movieTitle,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                
+                // Like icon
+                Icon(
+                    imageVector = Icons.Default.Favorite,
+                    contentDescription = "Liked",
+                    tint = Color.Red,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Author + rating
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Review by ${review.authorName}",
+                    fontSize = 12.sp,
+                    color = InnieGreen
+                )
+                
+                review.rating?.let { rating ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = String.format("%.1f", rating),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = InnieGreen
+                        )
+                        Text("★", color = InnieGreen, fontSize = 14.sp)
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Review body
+            Text(
+                text = review.reviewBody,
+                fontSize = 13.sp,
+                color = Color.DarkGray,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis,
+                lineHeight = 18.sp
+            )
+            
+            Spacer(modifier = Modifier.height(8.dp))
+            
+            // Read more
+            Text(
+                text = "Read full review →",
+                fontSize = 12.sp,
+                color = InnieGreen,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+/**
+ * Horizontal row for a category in All tab (Movies, Albums, Shots, News)
  */
 @Composable
 private fun LikesHorizontalRow(
     title: String,
     items: List<LikedContent>,
     hasMore: Boolean,
-    onMoreClick: () -> Unit
+    onMoreClick: () -> Unit,
+    navController: NavController
 ) {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         // Header
@@ -286,7 +578,7 @@ private fun LikesHorizontalRow(
         Spacer(modifier = Modifier.height(12.dp))
         
         // Horizontal row
-        androidx.compose.foundation.lazy.LazyRow(
+        LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -294,7 +586,14 @@ private fun LikesHorizontalRow(
                 LikedItemCompact(
                     posterUrl = item.imageUrl,
                     title = item.title,
-                    onClick = { /* Navigate to detail */ }
+                    onClick = {
+                        when (item) {
+                            is LikedContent.LikedMovie -> navController.navigate(Screen.MoviePage.createRoute(item.id))
+                            is LikedContent.LikedNews -> navController.navigate(Screen.NewsDetail.createRoute(item.id))
+                            is LikedContent.LikedAlbum -> navController.navigate(Screen.AlbumDetail.createRoute(item.id))
+                            else -> { /* TODO */ }
+                        }
+                    }
                 )
             }
             
@@ -371,7 +670,7 @@ private fun LikeStatCard(
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.width(70.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)),
         shape = RoundedCornerShape(12.dp)
     ) {
@@ -384,12 +683,12 @@ private fun LikeStatCard(
             Text(
                 text = count.toString(),
                 fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
+                fontSize = 16.sp,
                 color = InnieGreen
             )
             Text(
                 text = label,
-                fontSize = 10.sp,
+                fontSize = 9.sp,
                 color = Color.Gray
             )
         }
