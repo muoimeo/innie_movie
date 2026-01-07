@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FilterList
 import androidx.compose.material.icons.outlined.Search
@@ -40,9 +41,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -97,78 +100,77 @@ val featuredAlbums = listOf(
 @Composable
 fun AlbumFeed(
     albums: List<Album> = emptyList(), // Albums from database
-    onAlbumClick: (Int) -> Unit, // Changed to Int for album ID
-    onSearchClick: () -> Unit = {},
-    onFilterClick: () -> Unit = {}
+    onAlbumClick: (Int) -> Unit // Changed to Int for album ID
 ) {
     var searchQuery by remember { mutableStateOf("") }
+    var isFocused by remember { mutableStateOf(false) }
+    
+    // Filter albums based on search query
+    val filteredAlbums = remember(searchQuery, albums) {
+        if (searchQuery.isEmpty()) {
+            albums
+        } else {
+            albums.filter { it.title.lowercase().contains(searchQuery.lowercase()) }
+        }
+    }
+    
+    val filteredFakeAlbums = remember(searchQuery) {
+        if (searchQuery.isEmpty()) {
+            featuredAlbums
+        } else {
+            featuredAlbums.filter { it.title.lowercase().contains(searchQuery.lowercase()) }
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
     ) {
-        // Search bar row - matching NewsFeed style (no blur)
-        Row(
+        // Search bar - functional like SearchScreen
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .height(40.dp)
+                .background(Color.White, RoundedCornerShape(8.dp))
+                .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(8.dp))
+                .padding(horizontal = 12.dp),
+            contentAlignment = Alignment.CenterStart
         ) {
-            // Search Bar
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(36.dp)
-                    .background(Color.White, RoundedCornerShape(8.dp))
-                    .border(0.5.dp, Color(0xFFB3B3B3), RoundedCornerShape(8.dp))
-                    .clickable { onSearchClick() }
-                    .padding(horizontal = 12.dp),
-                contentAlignment = Alignment.CenterStart
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Search,
-                        contentDescription = "Search",
-                        modifier = Modifier.size(16.dp),
-                        tint = Color(0xFF1A202C)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Find your album",
-                        color = Color(0xFF1A202C),
-                        fontSize = 11.sp
-                    )
-                }
-            }
-            
-            // Filter Button
-            Box(
-                modifier = Modifier
-                    .height(36.dp)
-                    .background(Color.White, RoundedCornerShape(8.dp))
-                    .border(0.5.dp, Color(0xFFB3B3B3), RoundedCornerShape(8.dp))
-                    .clickable { onFilterClick() }
-                    .padding(horizontal = 12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.FilterList,
-                        contentDescription = "Filter",
-                        modifier = Modifier.size(14.dp),
-                        tint = Color(0xFF1A202C)
-                    )
-                    Text(
-                        text = "Filter",
-                        color = Color(0xFF1A202C),
-                        fontSize = 11.sp
+                Icon(
+                    imageVector = Icons.Outlined.Search,
+                    contentDescription = "Search",
+                    modifier = Modifier.size(20.dp),
+                    tint = Color.Gray
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                
+                Box(modifier = Modifier.weight(1f)) {
+                    if (searchQuery.isEmpty() && !isFocused) {
+                        Text(
+                            text = "Find your album",
+                            color = Color.Gray,
+                            fontSize = 14.sp
+                        )
+                    }
+                    BasicTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        textStyle = TextStyle(
+                            color = Color.Black,
+                            fontSize = 14.sp
+                        ),
+                        singleLine = true,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .onFocusChanged { focusState ->
+                                isFocused = focusState.isFocused
+                            }
                     )
                 }
             }
@@ -191,7 +193,7 @@ fun AlbumFeed(
             
             // "Featured" text
             Text(
-                text = "Featured",
+                text = if (searchQuery.isEmpty()) "Featured" else "Results",
                 color = InnieGreen,
                 fontWeight = FontWeight.Bold,
                 fontSize = 17.sp,
@@ -217,14 +219,14 @@ fun AlbumFeed(
         ) {
             // Use database albums if available, fallback to fake
             if (albums.isNotEmpty()) {
-                items(albums) { album ->
+                items(filteredAlbums) { album ->
                     AlbumGridCardDb(
                         album = album,
                         onClick = { onAlbumClick(album.id) }
                     )
                 }
             } else {
-                items(featuredAlbums) { album ->
+                items(filteredFakeAlbums) { album ->
                     AlbumGridCard(
                         album = album,
                         onClick = { /* Legacy fake data */ }
