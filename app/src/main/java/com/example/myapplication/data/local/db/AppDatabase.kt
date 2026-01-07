@@ -48,7 +48,7 @@ import com.example.myapplication.data.local.entities.WatchlistItem
         UserActivity::class,
         Comment::class
     ],
-    version = 11,  // Added Review entity
+    version = 12,  // Added displayName, gender, dateOfBirth, coverUrl to User entity
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

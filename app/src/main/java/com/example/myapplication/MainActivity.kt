@@ -33,6 +33,13 @@ import com.example.myapplication.ui.screens.profile.SettingsScreen
 import com.example.myapplication.ui.screens.profile.AlbumsScreen
 import com.example.myapplication.ui.screens.profile.LikesScreen
 import com.example.myapplication.ui.screens.profile.WatchlistScreen
+import com.example.myapplication.ui.screens.profile.AccountScreen
+import com.example.myapplication.ui.screens.profile.NotificationSettingsScreen
+import com.example.myapplication.ui.screens.profile.HelpSupportScreen
+import com.example.myapplication.ui.screens.profile.AboutScreen
+import com.example.myapplication.ui.screens.profile.TermsOfUseScreen
+import com.example.myapplication.ui.screens.profile.PrivacyPolicyScreen
+import com.example.myapplication.ui.screens.profile.ThirdPartyNoticesScreen
 class AuthViewModelFactory(
     private val repository: AuthRepository
 ) : ViewModelProvider.Factory {
@@ -204,6 +211,27 @@ class MainActivity : ComponentActivity() {
                     }
                     composable(Profile.Watchlist.route) {
                         WatchlistScreen(navController = navController)
+                    }
+                    composable(Profile.Account.route) {
+                        AccountScreen(navController = navController)
+                    }
+                    composable(Profile.NotificationSettings.route) {
+                        NotificationSettingsScreen(navController = navController)
+                    }
+                    composable(Profile.HelpSupport.route) {
+                        HelpSupportScreen(navController = navController)
+                    }
+                    composable(Profile.About.route) {
+                        AboutScreen(navController = navController)
+                    }
+                    composable(Profile.TermsOfUse.route) {
+                        TermsOfUseScreen(navController = navController)
+                    }
+                    composable(Profile.PrivacyPolicy.route) {
+                        PrivacyPolicyScreen(navController = navController)
+                    }
+                    composable(Profile.ThirdPartyNotices.route) {
+                        ThirdPartyNoticesScreen(navController = navController)
                     }
                     
                     // User Profile - for viewing other users' profiles
