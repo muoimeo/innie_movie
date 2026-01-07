@@ -4,6 +4,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.compose.runtime.collectAsState
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -66,6 +67,12 @@ class MainActivity : ComponentActivity() {
         if (SKIP_AUTH_FOR_DEV) {
             com.example.myapplication.data.session.UserSessionManager.startGuestSession()
         }
+        
+        // Seed sample data (reviews, comments) if database is empty
+        com.example.myapplication.data.local.db.DatabaseSeeder.seedIfNeeded(
+            this,
+            lifecycleScope
+        )
         
         setContent {
             MyApplicationTheme {
@@ -169,6 +176,17 @@ class MainActivity : ComponentActivity() {
                             navController = navController
                         )
                     }
+                    
+                    composable(
+                        route = Screen.ReviewDetail.route,
+                        arguments = listOf(navArgument("reviewId") { type = NavType.IntType })
+                    ) { backStackEntry ->
+                        val reviewId = backStackEntry.arguments?.getInt("reviewId") ?: 0
+                        com.example.myapplication.ui.screens.community.ReviewDetailScreen(
+                            reviewId = reviewId,
+                            navController = navController
+                        )
+                    }
                     composable(Profile.WatchHistory.route) {
                         WatchHistoryScreen(navController = navController)
                     }
@@ -186,6 +204,19 @@ class MainActivity : ComponentActivity() {
                     }
                     composable(Profile.Watchlist.route) {
                         WatchlistScreen(navController = navController)
+                    }
+                    
+                    // User Profile - for viewing other users' profiles
+                    composable(
+                        route = Screen.UserProfile.route,
+                        arguments = listOf(navArgument("userId") { type = NavType.StringType })
+                    ) { backStackEntry ->
+                        val userId = backStackEntry.arguments?.getString("userId") ?: ""
+                        ProfileScreen(
+                            navController = navController,
+                            isOwnProfile = false,
+                            targetUserId = userId
+                        )
                     }
                 }
                 }

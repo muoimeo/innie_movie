@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material3.*
@@ -40,11 +41,14 @@ import kotlinx.coroutines.CoroutineScope
 fun ProfileScreen(
     navController: NavController,
     user: UserProfile = sampleProfile,
-    profileViewModel: ProfileViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    profileViewModel: ProfileViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+    isOwnProfile: Boolean = true,  // true = own profile with sidebar, false = viewing other user
+    targetUserId: String? = null   // userId when viewing other user's profile
 ) {
     // Real stats from database
     val watchedCount by profileViewModel.watchedCount.collectAsState()
     val likeCount by profileViewModel.likeCount.collectAsState()
+    val reviewCount by profileViewModel.reviewCount.collectAsState()
     val likedMovies by profileViewModel.likedMovies.collectAsState()
     val recentWatchedMovies by profileViewModel.recentWatchedMovies.collectAsState()
     
@@ -55,23 +59,22 @@ fun ProfileScreen(
     val friendsCount by profileViewModel.friendsCount.collectAsState()
     val followingCount by profileViewModel.followingCount.collectAsState()
     
-    // Trạng thái điều khiển Drawer (danh sách đè lên)
+    // For other user's profile, use targetUserId to get their info
+    val profileDisplayName = if (!isOwnProfile && targetUserId != null) {
+        targetUserId.replace("user_", "").replace("guest_", "").replaceFirstChar { it.uppercase() }
+    } else displayName
+    
+    val profileUsername = if (!isOwnProfile && targetUserId != null) {
+        "@${targetUserId.replace("user_", "").replace("guest_", "")}"
+    } else username
+    
+    // Drawer state (only used for own profile)
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        gesturesEnabled = true,
-        drawerContent = {
-            ModalDrawerSheet(
-                modifier = Modifier.width(300.dp),
-                drawerContainerColor = Color.White,
-                drawerShape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
-            ) {
-                ProfileSideMenuContent(displayName, username, navController, drawerState, scope)
-            }
-        }
-    ) {
+    // Profile content composable (reused for both modes)
+    @Composable
+    fun ProfileContentBody(showMenuButton: Boolean) {
         Scaffold(
             containerColor = Color.White
         ) { paddingValues ->
@@ -84,12 +87,21 @@ fun ProfileScreen(
                         .padding(paddingValues)
                         .verticalScroll(rememberScrollState())
                 ) {
-                    // 1. Header Section với nút mở Menu
-                    ProfileHeaderSectionReal(
-                        displayName = displayName,
-                        username = username,
-                        onMenuClick = { scope.launch { drawerState.open() } }
-                    )
+                    // 1. Header Section - menu button only for own profile
+                    if (showMenuButton) {
+                        ProfileHeaderSectionReal(
+                            displayName = profileDisplayName,
+                            username = profileUsername,
+                            onMenuClick = { scope.launch { drawerState.open() } }
+                        )
+                    } else {
+                        // Header for other user's profile with back button
+                        ProfileHeaderSectionOther(
+                            displayName = profileDisplayName,
+                            username = profileUsername,
+                            onBackClick = { navController.popBackStack() }
+                        )
+                    }
 
                     // 2. Social Stats (Followers, Friends...)
                     SocialStatsSectionReal(
@@ -98,17 +110,18 @@ fun ProfileScreen(
                         followingCount = followingCount
                     )
 
-                    // 3. Activity Stats (Watched, Film this year...)
+                    // 3. Activity Stats (Watched, Likes, Albums, Reviews)
                     ActivityStatsSectionReal(
                         watchedCount = watchedCount,
                         likesCount = likeCount,
+                        reviewCount = reviewCount,
                         user = user
                     )
 
                     // 4. Favorite Films from Database
                     if (likedMovies.isNotEmpty()) {
                         HorizontalFilmSectionFromMovies(
-                            title = "$displayName's Favorite Films",
+                            title = "$profileDisplayName's Favorite Films",
                             movies = likedMovies.take(8)
                         )
                     } else {
@@ -123,10 +136,10 @@ fun ProfileScreen(
                         HorizontalFilmSectionFromMovies(
                             title = "Recent Watched",
                             movies = recentWatchedMovies.take(8),
-                            showSeeAll = true,
+                            showSeeAll = isOwnProfile,
                             onSeeAllClick = { navController.navigate(Profile.WatchHistory.route) }
                         )
-                    } else {
+                    } else if (isOwnProfile) {
                         // Fallback to template when no watched movies
                         HorizontalFilmSection(
                             title = "Recent Watched",
@@ -137,13 +150,37 @@ fun ProfileScreen(
                         )
                     }
 
-                    // 6. Recent Reviewed (New Section)
-                    RecentReviewedSection(user, onSeeAllClick = { navController.navigate(Profile.Reviews.route) })
+                    // 6. Recent Reviewed (only for own profile)
+                    if (isOwnProfile) {
+                        RecentReviewedSection(user, onSeeAllClick = { navController.navigate(Profile.Reviews.route) })
+                    }
 
                     Spacer(modifier = Modifier.height(120.dp))
                 }
             }
         }
+    }
+
+    // Conditionally wrap with drawer (own profile) or show directly (other user)
+    if (isOwnProfile) {
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            gesturesEnabled = true,
+            drawerContent = {
+                ModalDrawerSheet(
+                    modifier = Modifier.width(300.dp),
+                    drawerContainerColor = Color.White,
+                    drawerShape = RoundedCornerShape(topEnd = 16.dp, bottomEnd = 16.dp)
+                ) {
+                    ProfileSideMenuContent(profileDisplayName, profileUsername, navController, drawerState, scope)
+                }
+            }
+        ) {
+            ProfileContentBody(showMenuButton = true)
+        }
+    } else {
+        // Other user's profile - no drawer
+        ProfileContentBody(showMenuButton = false)
     }
 }
 
@@ -273,6 +310,73 @@ fun ProfileHeaderSectionReal(
 }
 
 /**
+ * Profile header for OTHER users (with back button instead of menu)
+ */
+@Composable
+fun ProfileHeaderSectionOther(
+    displayName: String,
+    username: String,
+    onBackClick: () -> Unit
+) {
+    Box(modifier = Modifier.fillMaxWidth().height(280.dp)) {
+        // Default grey background
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .background(
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(Color(0xFF2D3748), Color(0xFF1A202C))
+                    )
+                )
+        )
+
+        // Back button with circular background for visibility
+        IconButton(
+            onClick = onBackClick,
+            modifier = Modifier
+                .padding(top = 40.dp, start = 8.dp)
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(Color.Black.copy(alpha = 0.4f))
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = Color.White,
+                modifier = Modifier.size(24.dp)
+            )
+        }
+
+        // Avatar and Name
+        Column(
+            modifier = Modifier.align(Alignment.BottomCenter),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Default person icon as avatar
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .clip(CircleShape)
+                    .border(3.dp, Color.White, CircleShape)
+                    .background(Color(0xFF4A5568)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = "Avatar",
+                    tint = Color.White,
+                    modifier = Modifier.size(56.dp)
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(text = displayName, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text(text = username, fontSize = 14.sp, color = Color.Gray)
+        }
+    }
+}
+
+/**
  * Social stats section using ViewModel values
  */
 @Composable
@@ -328,6 +432,7 @@ fun ActivityStatItem(count: Int, label: String, color: Color) {
 fun ActivityStatsSectionReal(
     watchedCount: Int,
     likesCount: Int,
+    reviewCount: Int,
     user: UserProfile
 ) {
     Row(
@@ -337,7 +442,7 @@ fun ActivityStatsSectionReal(
         ActivityStatItem(watchedCount, "Watched", Color(0xFF00C02B))
         ActivityStatItem(likesCount, "Likes", Color(0xFFB34393))
         ActivityStatItem(user.albumsCount, "Albums", Color(0xFF00C02B))
-        ActivityStatItem(user.reviewsCount, "Reviews", Color(0xFFB34393))
+        ActivityStatItem(reviewCount, "Reviews", Color(0xFFB34393))
     }
 }
 

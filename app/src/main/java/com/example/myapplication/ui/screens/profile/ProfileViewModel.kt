@@ -12,6 +12,7 @@ import com.example.myapplication.data.repository.UserActivityRepository
 import com.example.myapplication.data.repository.UserMovieRepository
 import com.example.myapplication.data.repository.WatchlistRepository
 import com.example.myapplication.data.repository.MovieRepository
+import com.example.myapplication.data.repository.ReviewRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +30,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val userMovieRepository = UserMovieRepository(database.userMovieStatsDao())
     private val watchlistRepository = WatchlistRepository(database.watchlistDao())
     private val movieRepository = MovieRepository(database.movieDao())
+    private val reviewRepository = ReviewRepository(database.reviewDao())
     
     // Get userId from session manager
     private val currentUserId: String
@@ -96,6 +98,13 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             // Load like count
             likeRepository.getUserLikeCount(currentUserId).collect { count ->
                 _likeCount.value = count
+            }
+        }
+        
+        viewModelScope.launch {
+            // Load user review count from database
+            reviewRepository.getUserReviewCount(currentUserId).collect { count ->
+                _reviewCount.value = count
             }
         }
         
