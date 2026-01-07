@@ -44,7 +44,8 @@ fun ProfileScreen(
     profileViewModel: ProfileViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
     isOwnProfile: Boolean = true,  // true = own profile with sidebar, false = viewing other user
     targetUserId: String? = null,   // userId when viewing other user's profile
-    onNavigateToSearch: () -> Unit = {}
+    onNavigateToSearch: () -> Unit = {},
+    onRemoveFavorite: (Int) -> Unit = {}
 ) {
     // Determine which user to load
     val userIdToLoad = targetUserId ?: com.example.myapplication.data.session.UserSessionManager.getUserId()
@@ -140,7 +141,8 @@ fun ProfileScreen(
                         movies = likedMovies.take(3),
                         navController = navController,
                         isOwnProfile = isOwnProfile,
-                        onNavigateToSearch = onNavigateToSearch
+                        onNavigateToSearch = onNavigateToSearch,
+                        onRemoveFavorite = onRemoveFavorite
                     )
 
                     // 5. Recent Watched from Database (max 4 movies + 'more' item)
@@ -670,17 +672,53 @@ fun HorizontalFilmSectionFromMovies(
 
 /**
  * Favorite Films Section with exactly 3 slots
- * - Filled slots show movie posters
+ * - Filled slots show movie posters (tap to view, long-press to remove)
  * - Empty slots show dashed border placeholder, clicking navigates to Search
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FavoriteFilmSlots(
     title: String,
     movies: List<com.example.myapplication.data.local.entities.Movie>,
     navController: NavController,
     isOwnProfile: Boolean = true,
-    onNavigateToSearch: () -> Unit
+    onNavigateToSearch: () -> Unit,
+    onRemoveFavorite: (Int) -> Unit = {}
 ) {
+    var showRemoveDialog by remember { mutableStateOf(false) }
+    var movieToRemove by remember { mutableStateOf<com.example.myapplication.data.local.entities.Movie?>(null) }
+    
+    // Remove confirmation dialog
+    if (showRemoveDialog && movieToRemove != null) {
+        AlertDialog(
+            onDismissRequest = { 
+                showRemoveDialog = false
+                movieToRemove = null
+            },
+            title = { Text("Remove from Favorites?") },
+            text = { Text("Remove \"${movieToRemove?.title}\" from your favorites?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        movieToRemove?.let { onRemoveFavorite(it.id) }
+                        showRemoveDialog = false
+                        movieToRemove = null
+                    }
+                ) {
+                    Text("Remove", color = Color.Red)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { 
+                    showRemoveDialog = false
+                    movieToRemove = null
+                }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+    
     Column(modifier = Modifier.padding(top = 24.dp)) {
         // Title
         Text(
@@ -711,11 +749,19 @@ fun FavoriteFilmSlots(
                             .weight(1f)
                             .aspectRatio(2f / 3f)
                             .clip(RoundedCornerShape(8.dp))
-                            .clickable {
-                                navController.navigate(
-                                    com.example.myapplication.ui.navigation.Screen.MoviePage.createRoute(movie.id)
-                                )
-                            },
+                            .combinedClickable(
+                                onClick = {
+                                    navController.navigate(
+                                        com.example.myapplication.ui.navigation.Screen.MoviePage.createRoute(movie.id)
+                                    )
+                                },
+                                onLongClick = {
+                                    if (isOwnProfile) {
+                                        movieToRemove = movie
+                                        showRemoveDialog = true
+                                    }
+                                }
+                            ),
                         contentScale = ContentScale.Crop
                     )
                 } else {
@@ -764,8 +810,6 @@ fun FavoriteFilmSlots(
         }
     }
 }
-
-
 
 @Composable
 fun HorizontalFilmSection(

@@ -40,6 +40,7 @@ import com.example.myapplication.ui.theme.InnieGreen
 fun SearchScreen(
     navController: NavController? = null,
     isAddMode: Boolean = false,
+    addModeText: String = "Select a movie to add to favorites",
     onMovieSelected: ((Int) -> Unit)? = null
 ) {
     val context = LocalContext.current
@@ -139,7 +140,7 @@ fun SearchScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Select a movie to add to favorites",
+                    text = addModeText,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     color = InnieGreen

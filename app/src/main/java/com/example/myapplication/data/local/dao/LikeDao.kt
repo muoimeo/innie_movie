@@ -57,4 +57,8 @@ interface LikeDao {
     // Get user's like count
     @Query("SELECT COUNT(*) FROM likes WHERE userId = :userId")
     fun getUserLikeCount(userId: String): Flow<Int>
+    
+    // Count likes for a specific item (one-time query)
+    @Query("SELECT COUNT(*) FROM likes WHERE targetType = :targetType AND targetId = :targetId")
+    suspend fun countLikes(targetType: String, targetId: Int): Int
 }

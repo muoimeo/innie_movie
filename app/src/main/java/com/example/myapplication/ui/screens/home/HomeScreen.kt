@@ -75,7 +75,8 @@ enum class HomeTopTab(val title: String) {
 fun HomeScreen(
     username: String,
     authViewModel: AuthViewModel,
-    navController: NavController
+    navController: NavController,
+    initialTab: Int = 0  // 0=Home, 1=Album, 2=News, 3=Shots
 ) {
     var currentRoute by rememberSaveable { mutableStateOf(BottomNavItem.Home.route) }
     
@@ -104,7 +105,8 @@ fun HomeScreen(
                 HomeContent(
                     username = username,
                     navController = navController,
-                    modifier = Modifier.padding(paddingValues)
+                    modifier = Modifier.padding(paddingValues),
+                    initialTab = initialTab
                 )
             }
             BottomNavItem.Community.route -> CommunityContent(navController = navController)
@@ -130,6 +132,12 @@ fun HomeScreen(
                 onNavigateToSearch = { 
                     isAddingFavorite = true
                     currentRoute = BottomNavItem.Search.route 
+                },
+                onRemoveFavorite = { movieId ->
+                    val userId = com.example.myapplication.data.session.UserSessionManager.getUserId()
+                    coroutineScope.launch {
+                        database.likeDao().unlike(userId, "movie", movieId)
+                    }
                 }
             )
             else -> {
@@ -150,9 +158,10 @@ fun HomeContent(
     navController: NavController? = null,
     modifier: Modifier = Modifier,
     homeViewModel: HomeViewModel = viewModel(),
-    albumViewModel: AlbumViewModel = viewModel()
+    albumViewModel: AlbumViewModel = viewModel(),
+    initialTab: Int = 0
 ) {
-    var selectedTab by rememberSaveable { mutableIntStateOf(0) }
+    var selectedTab by rememberSaveable { mutableIntStateOf(initialTab) }
     val tabs = HomeTopTab.entries
     val isNewsTab = tabs[selectedTab] == HomeTopTab.NEWS
     val isShotsTab = tabs[selectedTab] == HomeTopTab.SHOTS

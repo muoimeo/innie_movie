@@ -142,6 +142,15 @@ class MainActivity : ComponentActivity() {
                             navController = navController
                         )
                     }
+                    composable(Screen.HomeAlbum.route) {
+                        val state = authViewModel.state.collectAsState()
+                        HomeScreen(
+                            username = state.value.currentUser?.username ?: "User",
+                            authViewModel = authViewModel,
+                            navController = navController,
+                            initialTab = 1 
+                        )
+                    }
 
                     composable(
                         route = Screen.MoviePage.route,

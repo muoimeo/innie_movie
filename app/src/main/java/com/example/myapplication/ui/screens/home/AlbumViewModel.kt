@@ -50,6 +50,16 @@ class AlbumViewModel(application: Application) : AndroidViewModel(application) {
     private val _isSaved = MutableStateFlow(false)
     val isSaved: StateFlow<Boolean> = _isSaved.asStateFlow()
     
+    // Album stats
+    private val _likeCount = MutableStateFlow(0)
+    val likeCount: StateFlow<Int> = _likeCount.asStateFlow()
+    
+    private val _commentCount = MutableStateFlow(0)
+    val commentCount: StateFlow<Int> = _commentCount.asStateFlow()
+    
+    private val _viewCount = MutableStateFlow(0)
+    val viewCount: StateFlow<Int> = _viewCount.asStateFlow()
+    
     init {
         loadAlbums()
     }
@@ -78,6 +88,12 @@ class AlbumViewModel(application: Application) : AndroidViewModel(application) {
             
             // Check if album is saved to library
             _isSaved.value = savedAlbumRepository.isSaved(currentUserId, albumId)
+            
+            // Load stats from database
+            _likeCount.value = database.likeDao().countLikes("album", albumId)
+            _commentCount.value = database.commentDao().countCommentsForContent("album", albumId)
+            // View count - use activity log or default to 0 for new albums
+            _viewCount.value = database.userActivityDao().countViews("album", albumId)
             
             // Log view for watch history
             userActivityRepository.logAlbumView(currentUserId, albumId)

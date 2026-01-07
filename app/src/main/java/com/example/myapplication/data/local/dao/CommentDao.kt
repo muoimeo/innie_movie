@@ -50,5 +50,9 @@ interface CommentDao {
     // Get root comment count for target
     @Query("SELECT COUNT(*) FROM comments WHERE targetType = :targetType AND targetId = :targetId AND parentCommentId IS NULL")
     fun getRootCommentCount(targetType: String, targetId: Int): Flow<Int>
+    
+    // Count comments for content (one-time query)
+    @Query("SELECT COUNT(*) FROM comments WHERE targetType = :targetType AND targetId = :targetId")
+    suspend fun countCommentsForContent(targetType: String, targetId: Int): Int
 }
 

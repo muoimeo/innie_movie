@@ -42,4 +42,8 @@ interface UserActivityDao {
     // Clean old activity (optional maintenance)
     @Query("DELETE FROM user_activity WHERE createdAt < :beforeTimestamp")
     suspend fun deleteOldActivity(beforeTimestamp: Long)
+    
+    // Count views for content (one-time query)
+    @Query("SELECT COUNT(*) FROM user_activity WHERE actionType = 'view' AND targetType = :targetType AND targetId = :targetId")
+    suspend fun countViews(targetType: String, targetId: Int): Int
 }

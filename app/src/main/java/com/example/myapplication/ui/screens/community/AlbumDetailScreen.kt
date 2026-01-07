@@ -55,6 +55,11 @@ fun AlbumDetailScreen(
     val isLiked by viewModel.isLiked.collectAsState()
     val isSaved by viewModel.isSaved.collectAsState()
     
+    // Collect stats from ViewModel
+    val viewCount by viewModel.viewCount.collectAsState()
+    val likeCount by viewModel.likeCount.collectAsState()
+    val commentCount by viewModel.commentCount.collectAsState()
+    
     // Snackbar state
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -94,9 +99,11 @@ fun AlbumDetailScreen(
                     
                     // Author & Title Section
                     item {
+                        val currentUserId = com.example.myapplication.data.session.UserSessionManager.getUserId()
                         AlbumInfoSection(
                             album = album!!,
                             isSaved = isSaved,
+                            isOwnAlbum = album!!.ownerId == currentUserId,
                             onSaveClick = {
                                 viewModel.toggleSave()
                                 scope.launch {
@@ -123,6 +130,9 @@ fun AlbumDetailScreen(
                     // Stats Row (Views, Likes, Comments)
                     item {
                         AlbumStatsRow(
+                            viewCount = viewCount,
+                            likeCount = likeCount,
+                            commentCount = commentCount,
                             isLiked = isLiked,
                             onLikeClick = {
                                 viewModel.toggleLike()
@@ -273,6 +283,7 @@ fun AlbumCoverSection(album: Album) {
 fun AlbumInfoSection(
     album: Album,
     isSaved: Boolean = false,
+    isOwnAlbum: Boolean = false,
     onSaveClick: () -> Unit = {}
 ) {
     // Format author name from ownerId (e.g., "user_marquee" -> "Marquee")
@@ -322,7 +333,7 @@ fun AlbumInfoSection(
         
         Spacer(modifier = Modifier.height(8.dp))
         
-        // Title row with Add to Albums button
+        // Title row with Add to Albums button (only show for other people's albums)
         Row(
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -334,23 +345,25 @@ fun AlbumInfoSection(
                 modifier = Modifier.weight(1f)
             )
             
-            // Add/Remove from Albums button - clickable with dynamic state
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.clickable { onSaveClick() }
-            ) {
-                Icon(
-                    imageVector = if (isSaved) Icons.Filled.Favorite else Icons.Outlined.Add,
-                    contentDescription = if (isSaved) "Remove from Albums" else "Add to Albums",
-                    tint = if (isSaved) InnieGreen else Color(0xFF1E1E1E),
-                    modifier = Modifier.size(20.dp)
-                )
-                Text(
-                    text = if (isSaved) "Saved" else "Add to Albums",
-                    fontSize = 8.sp,
-                    color = InnieGreen,
-                    fontWeight = FontWeight.Bold
-                )
+            // Add/Remove from Albums button - hide for own albums
+            if (!isOwnAlbum) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.clickable { onSaveClick() }
+                ) {
+                    Icon(
+                        imageVector = if (isSaved) Icons.Filled.Favorite else Icons.Outlined.Add,
+                        contentDescription = if (isSaved) "Remove from Albums" else "Add to Albums",
+                        tint = if (isSaved) InnieGreen else Color(0xFF1E1E1E),
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Text(
+                        text = if (isSaved) "Saved" else "Add to Albums",
+                        fontSize = 8.sp,
+                        color = InnieGreen,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }
@@ -369,9 +382,21 @@ fun formatDate(timestamp: Long): String {
 // Fix #6: Heart icon is now outline (FavoriteBorder) and clickable
 @Composable
 fun AlbumStatsRow(
+    viewCount: Int = 0,
+    likeCount: Int = 0,
+    commentCount: Int = 0,
     isLiked: Boolean = false,
     onLikeClick: () -> Unit = {}
 ) {
+    // Format counts for display
+    fun formatCount(count: Int): String {
+        return when {
+            count >= 1000000 -> "${count / 1000000}M"
+            count >= 1000 -> "${count / 1000}k"
+            else -> count.toString()
+        }
+    }
+    
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -380,7 +405,7 @@ fun AlbumStatsRow(
     ) {
         StatItem(
             icon = Icons.Outlined.RemoveRedEye,
-            count = "40k",
+            count = formatCount(viewCount),
             tint = InnieGreen
         )
         // Clickable heart with filled icon when liked
@@ -396,7 +421,7 @@ fun AlbumStatsRow(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "30k",
+                text = formatCount(likeCount),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color(0xFF1A202C)
@@ -404,7 +429,7 @@ fun AlbumStatsRow(
         }
         StatItem(
             icon = Icons.Outlined.ChatBubbleOutline,
-            count = "12k",
+            count = formatCount(commentCount),
             tint = Color(0xFF1A202C)
         )
     }

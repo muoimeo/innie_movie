@@ -1,18 +1,19 @@
 package com.example.myapplication.ui.screens.profile
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,20 +26,35 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.myapplication.data.local.entities.MovieItem
-import com.example.myapplication.data.watchHistoryList
+import coil.compose.AsyncImage
+import com.example.myapplication.data.local.entities.Movie
+import com.example.myapplication.ui.theme.InnieGreen
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateAlbumScreen(
     onCancel: () -> Unit,
-    onSave: () -> Unit
+    onSave: (name: String, description: String, visibility: String, movieIds: List<Int>) -> Unit,
+    onAddMovies: () -> Unit = {},
+    selectedMovies: List<Movie> = emptyList(),
+    onRemoveMovie: (Int) -> Unit = {},
+    // Initial values for form restoration
+    initialName: String = "",
+    initialDescription: String = "",
+    initialVisibility: String = "Friends",
+    initialHashtags: String = "",
+    onFormChange: (name: String, description: String, visibility: String, hashtags: String) -> Unit = { _, _, _, _ -> }
 ) {
-    var albumName by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var hashtags by remember { mutableStateOf("") }
-    var visibleTo by remember { mutableStateOf("Friends") }
+    var albumName by remember { mutableStateOf(initialName) }
+    var description by remember { mutableStateOf(initialDescription) }
+    var hashtags by remember { mutableStateOf(initialHashtags) }
+    var visibleTo by remember { mutableStateOf(initialVisibility) }
     var whoCanComment by remember { mutableStateOf("Friends") }
+    
+    // Update form state when values change
+    LaunchedEffect(albumName, description, visibleTo, hashtags) {
+        onFormChange(albumName, description, visibleTo, hashtags)
+    }
 
     Scaffold(
         topBar = {
@@ -52,8 +68,17 @@ fun CreateAlbumScreen(
                     }
                 },
                 actions = {
-                    TextButton(onClick = onSave) {
-                        Text("Save", color = Color.Gray, fontSize = 16.sp)
+                    TextButton(
+                        onClick = { 
+                            onSave(albumName, description, visibleTo, selectedMovies.map { it.id })
+                        },
+                        enabled = albumName.isNotBlank() && selectedMovies.isNotEmpty()
+                    ) {
+                        Text(
+                            "Save", 
+                            color = if (albumName.isNotBlank() && selectedMovies.isNotEmpty()) InnieGreen else Color.Gray, 
+                            fontSize = 16.sp
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = Color.White)
@@ -91,7 +116,7 @@ fun CreateAlbumScreen(
                                 style = TextStyle(
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.Black
+                                    color = Color.Gray
                                 )
                             )
                         }
@@ -118,7 +143,7 @@ fun CreateAlbumScreen(
                     textStyle = TextStyle(
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Gray
+                        color = Color.Black
                     ),
                     decorationBox = { innerTextField ->
                         if (description.isEmpty()) {
@@ -127,7 +152,7 @@ fun CreateAlbumScreen(
                                 style = TextStyle(
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF424242) // Darker gray for placeholder
+                                    color = Color.Gray
                                 )
                             )
                         }
@@ -161,24 +186,62 @@ fun CreateAlbumScreen(
 
             // Add Movies Section
             Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Add movies ...",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFF00C02B) // Green color
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Add movies (${selectedMovies.size})",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = InnieGreen
+                )
+                IconButton(onClick = onAddMovies) {
+                    Icon(
+                        imageVector = Icons.Default.Add,
+                        contentDescription = "Add Movies",
+                        tint = InnieGreen
+                    )
+                }
+            }
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Movie Grid (Sample)
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(3),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                // Mocking selection for demo
-                items(watchHistoryList.take(2)) { movie -> // Taking 2 for demo as per image
-                   MovieSelectionItem(movie)
+            // Movie Grid using database movies
+            if (selectedMovies.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp)
+                        .border(2.dp, Color(0xFFE0E0E0), RoundedCornerShape(12.dp))
+                        .clickable { onAddMovies() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add",
+                            tint = Color.Gray,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Tap to add movies", color = Color.Gray, fontSize = 14.sp)
+                    }
+                }
+            } else {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    itemsIndexed(selectedMovies) { index, movie ->
+                        MovieSelectionItemDb(
+                            movie = movie,
+                            index = index + 1,
+                            onRemove = { onRemoveMovie(movie.id) }
+                        )
+                    }
                 }
             }
         }
@@ -214,7 +277,7 @@ fun DropdownRow(label: String, value: String, onValueChange: (String) -> Unit) {
             ) {
                 // Icon users (mock)
                 Icon(
-                    painter = painterResource(id = android.R.drawable.ic_menu_myplaces), // Placeholder icon
+                    painter = painterResource(id = android.R.drawable.ic_menu_myplaces),
                     contentDescription = null,
                     modifier = Modifier.size(16.dp),
                     tint = Color.Black
@@ -245,33 +308,57 @@ fun DropdownRow(label: String, value: String, onValueChange: (String) -> Unit) {
 }
 
 @Composable
-fun MovieSelectionItem(movie: MovieItem) {
+fun MovieSelectionItemDb(movie: Movie, index: Int, onRemove: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(0.7f)
-            .clip(RoundedCornerShape(8.dp))
+            .padding(bottom = 14.dp) // Space for badge overflow
     ) {
-        Image(
-            painter = painterResource(id = movie.posterRes),
-            contentDescription = movie.title,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(2f / 3f)
+                .clip(RoundedCornerShape(8.dp))
+        ) {
+            AsyncImage(
+                model = movie.posterUrl,
+                contentDescription = movie.title,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+            
+            // Remove button (top right)
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp)
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .clickable { onRemove() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = "Remove",
+                    tint = Color.White,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
         
-        // Badge (Mock number 1, 2)
-        val index = if (movie.title.contains("Stranger")) "1" else "2"
+        // Badge at bottom center, overlapping edge
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .offset(y = 10.dp) // Slight overlap
-                .size(24.dp)
+                .offset(y = 12.dp)
+                .size(26.dp)
                 .clip(CircleShape)
-                .background(Color(0xFF00C02B))
+                .background(InnieGreen)
                 .border(2.dp, Color.White, CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Text(text = index, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(text = index.toString(), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

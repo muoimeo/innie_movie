@@ -75,4 +75,13 @@ class AlbumsViewModel(application: Application) : AndroidViewModel(application) 
             savedAlbumRepository.unsave(currentUserId, albumId)
         }
     }
+    
+    fun deleteAlbum(albumId: Int) {
+        viewModelScope.launch {
+            val album = albumRepository.getAlbumById(albumId)
+            album?.let {
+                albumRepository.deleteAlbum(it)
+            }
+        }
+    }
 }
