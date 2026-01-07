@@ -97,7 +97,7 @@ fun HomeScreen(
             }
             BottomNavItem.Community.route -> CommunityContent(navController = navController)
             BottomNavItem.Search.route -> SearchScreen()
-            BottomNavItem.Notifications.route -> NotificationsScreen(onBackClick = { currentRoute = BottomNavItem.Home.route })
+            BottomNavItem.Notifications.route -> NotificationsScreen(navController = navController, onBackClick = { currentRoute = BottomNavItem.Home.route })
             BottomNavItem.Profile.route -> ProfileScreen(navController= navController)
             else -> {
                 // Fallback để tránh crash

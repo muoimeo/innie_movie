@@ -101,28 +101,125 @@ data class NotificationItem(
     val description: String,
     val time: String,
     val isRead: Boolean,
-    val avatarRes: Int,
-    val type: NotificationType
+    val imageUrl: String,
+    val type: NotificationType,
+    val relatedId: Int // ID of related content (news, album, movie)
 )
 
 val sampleNotifications = listOf(
-    // NEWS type - Yellow
-    NotificationItem(1, "Marvel Studios Announces Phase 7 Slate", "Big news! Marvel has unveiled their exciting Phase 7 lineup. Check out the full details!", "2 days ago", false, R.drawable.the_irishman, NotificationType.NEWS),
-    NotificationItem(2, "Oscar Nominations Revealed!", "The Academy has announced this year's Oscar nominations. See who made the cut!", "3 days ago", true, R.drawable.the_irishman, NotificationType.NEWS),
+    // NEWS type - Yellow - Real news from app (relatedId = news ID)
+    NotificationItem(
+        id = 1,
+        title = "Dune: Part Three Officially Greenlit",
+        description = "Warner Bros. has officially greenlit Dune: Part Three. Denis Villeneuve's epic sci-fi saga continues!",
+        time = "2 hours ago",
+        isRead = false,
+        imageUrl = "https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg",
+        type = NotificationType.NEWS,
+        relatedId = 2  // News ID 2 - Dune article
+    ),
+    NotificationItem(
+        id = 2,
+        title = "Marvel Studios Announces Phase 7 Slate",
+        description = "Kevin Feige unveils Marvel's new direction: fewer films, higher stakes, and a focus on character-driven narratives.",
+        time = "5 hours ago",
+        isRead = false,
+        imageUrl = "https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg",
+        type = NotificationType.NEWS,
+        relatedId = 6  // News ID 6 - Marvel article
+    ),
+    NotificationItem(
+        id = 3,
+        title = "The Batman 2: Villain Details Revealed",
+        description = "Matt Reeves shares exclusive details about The Batman sequel, teasing the Court of Owls.",
+        time = "1 day ago",
+        isRead = true,
+        imageUrl = "https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg",
+        type = NotificationType.NEWS,
+        relatedId = 4  // News ID 4 - Batman article
+    ),
+    NotificationItem(
+        id = 4,
+        title = "Stranger Things 5 Final Season Update",
+        description = "The Duffer Brothers deliver a masterclass in how to end a beloved series on its own terms.",
+        time = "2 days ago",
+        isRead = true,
+        imageUrl = "https://image.tmdb.org/t/p/original/cVxVGwHce6xnW8UaVUggaPXbmoE.jpg",
+        type = NotificationType.NEWS,
+        relatedId = 1  // News ID 1 - Stranger Things article
+    ),
     
-    // TRAILER type - Blue
-    NotificationItem(3, "New Trailer: Dune Part Three", "A new trailer for Dune: Part Three has been released! Watch it now.", "2 days ago", false, R.drawable.the_irishman, NotificationType.TRAILER),
-    NotificationItem(4, "Avatar: Fire and Ash Trailer", "The first teaser for Avatar 4 is finally here. Prepare to be amazed!", "1 week ago", true, R.drawable.the_irishman, NotificationType.TRAILER),
+    // TRAILER type - Blue - New releases/trailers (relatedId = movie ID)
+    NotificationItem(
+        id = 5,
+        title = "Oppenheimer - Now Streaming",
+        description = "Christopher Nolan's Oscar-winning masterpiece is now available to stream. Don't miss it!",
+        time = "3 hours ago",
+        isRead = false,
+        imageUrl = "https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",
+        type = NotificationType.TRAILER,
+        relatedId = 3  // Movie ID 3 - Oppenheimer
+    ),
+    NotificationItem(
+        id = 6,
+        title = "Spider-Man: Across the Spider-Verse",
+        description = "The critically acclaimed animated sequel is now available on your watchlist.",
+        time = "1 day ago",
+        isRead = true,
+        imageUrl = "https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg",
+        type = NotificationType.TRAILER,
+        relatedId = 7  // Movie ID 7 - Spider-Verse
+    ),
     
-    // COMMENT type - Green
-    NotificationItem(5, "Emma replied to your comment", "Emma replied: 'I totally agree! The cinematography was stunning.'", "1 hour ago", false, R.drawable.the_irishman, NotificationType.COMMENT),
-    NotificationItem(6, "New comment on Oppenheimer", "John commented on your review of Oppenheimer: 'Great analysis!'", "5 hours ago", true, R.drawable.the_irishman, NotificationType.COMMENT),
-    NotificationItem(7, "Viral Review Alert!", "Your post about Parasite just hit 1,000 likes. Check out the latest comments!", "2 days ago", true, R.drawable.the_irishman, NotificationType.COMMENT),
-    
-    // FRIEND type - Purple
-    NotificationItem(8, "Emma created a new album", "Your friend Emma created a new album: 'Best Horror Films 2024'.", "3 hours ago", false, R.drawable.the_irishman, NotificationType.FRIEND),
-    NotificationItem(9, "John updated his watchlist", "John added 'Gladiator II' and 3 other movies to his watchlist.", "1 day ago", true, R.drawable.the_irishman, NotificationType.FRIEND),
-    NotificationItem(10, "Sarah rated Interstellar ★★★★★", "Your friend Sarah gave Interstellar a 5-star rating!", "2 days ago", true, R.drawable.the_irishman, NotificationType.FRIEND),
-    NotificationItem(11, "New friend request", "Mike wants to be your friend on Innie Movie.", "3 days ago", true, R.drawable.the_irishman, NotificationType.FRIEND),
-    NotificationItem(12, "David started following you", "David is now following your movie activity.", "1 week ago", true, R.drawable.the_irishman, NotificationType.FRIEND)
+    // FRIEND type - Purple - Albums (relatedId = album ID)
+    NotificationItem(
+        id = 7,
+        title = "New Album: A-MUST-WATCH OAT!!",
+        description = "Check out this curated collection of masterpieces that everyone should watch at least once!",
+        time = "4 hours ago",
+        isRead = false,
+        imageUrl = "https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg",
+        type = NotificationType.FRIEND,
+        relatedId = 1  // Album ID 1
+    ),
+    NotificationItem(
+        id = 8,
+        title = "Christopher Nolan Collection Updated",
+        description = "The album 'Christopher Nolan Collection' has been updated with new films.",
+        time = "6 hours ago",
+        isRead = false,
+        imageUrl = "https://image.tmdb.org/t/p/w500/gEU2QniE6E77NI6lCU6MxlNBvIx.jpg",
+        type = NotificationType.FRIEND,
+        relatedId = 2  // Album ID 2
+    ),
+    NotificationItem(
+        id = 9,
+        title = "New Album: Best of 2023",
+        description = "Top films and series released in 2023 - a curated collection just for you.",
+        time = "1 day ago",
+        isRead = true,
+        imageUrl = "https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",
+        type = NotificationType.FRIEND,
+        relatedId = 3  // Album ID 3
+    ),
+    NotificationItem(
+        id = 10,
+        title = "Superhero Movies Album",
+        description = "The best superhero films from DC and Marvel - all in one place!",
+        time = "2 days ago",
+        isRead = true,
+        imageUrl = "https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg",
+        type = NotificationType.FRIEND,
+        relatedId = 4  // Album ID 4
+    ),
+    NotificationItem(
+        id = 11,
+        title = "Binge-worthy Series Collection",
+        description = "Series you can't stop watching once you start. Perfect for your next binge session!",
+        time = "3 days ago",
+        isRead = true,
+        imageUrl = "https://image.tmdb.org/t/p/w500/1XS1oqL89opfnbLl8WnZY1O1uJx.jpg",
+        type = NotificationType.FRIEND,
+        relatedId = 5  // Album ID 5
+    )
 )

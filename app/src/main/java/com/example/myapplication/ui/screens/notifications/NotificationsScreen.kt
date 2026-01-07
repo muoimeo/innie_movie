@@ -1,6 +1,5 @@
 package com.example.myapplication.ui.screens.notifications
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -8,10 +7,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Report
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,27 +16,52 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImage
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
 import com.example.myapplication.data.NotificationItem
+import com.example.myapplication.data.NotificationPreferencesManager
 import com.example.myapplication.data.NotificationType
 import com.example.myapplication.data.sampleNotifications
 import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Person
+import androidx.navigation.NavController
+import com.example.myapplication.ui.navigation.Screen
 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NotificationsScreen(onBackClick: () -> Unit = {}) {
+fun NotificationsScreen(
+    navController: NavController? = null,
+    onBackClick: () -> Unit = {}
+) {
+    val context = LocalContext.current
+    val prefsManager = remember { NotificationPreferencesManager(context) }
+    
+    // Filter notifications based on preferences
+    val filteredNotifications = remember(prefsManager) {
+        sampleNotifications.filter { notification ->
+            prefsManager.shouldShowNotification(notification.type)
+        }
+    }
+    
+    // Use mutableState to allow re-filtering and deletion
+    var notifications by remember { mutableStateOf(filteredNotifications) }
+    
+    // Refresh notifications when screen is recomposed (e.g., returning from settings)
+    LaunchedEffect(Unit) {
+        notifications = sampleNotifications.filter { notification ->
+            prefsManager.shouldShowNotification(notification.type)
+        }
+    }
+    
     var selectedNotification by remember { mutableStateOf<NotificationItem?>(null) }
     val sheetState = rememberModalBottomSheetState()
-    val scope = rememberCoroutineScope()
 
     Scaffold(
         topBar = {
@@ -52,17 +74,66 @@ fun NotificationsScreen(onBackClick: () -> Unit = {}) {
         },
         containerColor = Color.White
     ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(bottom = 100.dp)
-        ) {
-            items(sampleNotifications) { notification ->
-                NotificationRow(
-                    notification = notification,
-                    onMenuClick = { selectedNotification = notification }
-                )
+        if (notifications.isEmpty()) {
+            // Empty state when all notifications are filtered out
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(32.dp)
+                ) {
+                    Text(
+                        text = "No notifications",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "You've turned off all notification types.\nGo to Settings > Notifications to enable them.",
+                        fontSize = 14.sp,
+                        color = Color.LightGray,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentPadding = PaddingValues(bottom = 100.dp)
+            ) {
+                items(notifications, key = { it.id }) { notification ->
+                    NotificationRow(
+                        notification = notification,
+                        onMenuClick = { selectedNotification = notification },
+                        onClick = {
+                            // Navigate based on notification type
+                            navController?.let { nav ->
+                                when (notification.type) {
+                                    NotificationType.NEWS -> {
+                                        nav.navigate(Screen.NewsDetail.createRoute(notification.relatedId))
+                                    }
+                                    NotificationType.TRAILER -> {
+                                        nav.navigate(Screen.MoviePage.createRoute(notification.relatedId))
+                                    }
+                                    NotificationType.FRIEND -> {
+                                        nav.navigate(Screen.AlbumDetail.createRoute(notification.relatedId))
+                                    }
+                                    NotificationType.COMMENT -> {
+                                        // For comments, could navigate to the related content
+                                        // For now, just do nothing as no comments exist yet
+                                    }
+                                }
+                            }
+                        }
+                    )
+                }
             }
         }
 
@@ -73,7 +144,6 @@ fun NotificationsScreen(onBackClick: () -> Unit = {}) {
                 containerColor = Color.White
             ) {
                 Column(modifier = Modifier.padding(bottom = 32.dp)) {
-                    // Header or Title (optional, mimicking filter title if any, or just options)
                     Text(
                         text = "Options",
                         fontWeight = FontWeight.Bold,
@@ -85,15 +155,8 @@ fun NotificationsScreen(onBackClick: () -> Unit = {}) {
                         headlineContent = { Text("Delete this notification") },
                         leadingContent = { Icon(Icons.Outlined.Delete, contentDescription = null) },
                         modifier = Modifier.clickable {
-                            // Handle Delete
-                            selectedNotification = null
-                        }
-                    )
-                    ListItem(
-                        headlineContent = { Text("Report to admin") },
-                        leadingContent = { Icon(Icons.Outlined.Report, contentDescription = null) },
-                        modifier = Modifier.clickable {
-                            // Handle Report
+                            // Remove from list
+                            notifications = notifications.filter { it.id != selectedNotification?.id }
                             selectedNotification = null
                         }
                     )
@@ -106,20 +169,22 @@ fun NotificationsScreen(onBackClick: () -> Unit = {}) {
 @Composable
 fun NotificationRow(
     notification: NotificationItem,
-    onMenuClick: () -> Unit
+    onMenuClick: () -> Unit,
+    onClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(onClick = onClick)
             .background(if (notification.isRead) Color.White else Color(0xFFEEEEEE))
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.Top
     ) {
         // Avatar with Type Badge
         Box {
-            Image(
-                painter = painterResource(id = notification.avatarRes),
-                contentDescription = "Avatar",
+            AsyncImage(
+                model = notification.imageUrl,
+                contentDescription = "Notification Image",
                 modifier = Modifier
                     .size(64.dp)
                     .clip(CircleShape),
