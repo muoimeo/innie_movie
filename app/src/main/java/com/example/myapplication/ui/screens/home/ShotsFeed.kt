@@ -80,6 +80,7 @@ import com.example.myapplication.data.shotLocalVideoMap
 import com.example.myapplication.ui.navigation.Screen
 import com.example.myapplication.ui.theme.InnieGreen
 import com.example.myapplication.ui.components.CommentBottomSheet
+import com.example.myapplication.ui.components.ShareBottomSheet
 import android.content.Intent
 import kotlinx.coroutines.delay
 
@@ -149,6 +150,7 @@ fun ShotsFeed(
                 
                 // Comment state for this shot
                 var showComments by remember { mutableStateOf(false) }
+                var showShare by remember { mutableStateOf(false) }
                 
                 // Get real comment count from database
                 val realCommentCount = shotCommentCounts[shot.id] ?: shot.commentCount
@@ -162,14 +164,7 @@ fun ShotsFeed(
                     realCommentCount = realCommentCount,
                     onLikeClick = { shotsViewModel.toggleLike(shot.id) },
                     onCommentClick = { showComments = true },
-                    onShareClick = {
-                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_SUBJECT, "Check out this shot!")
-                            putExtra(Intent.EXTRA_TEXT, "${shot.caption}\n\nShared from Innie Movie App")
-                        }
-                        context.startActivity(Intent.createChooser(shareIntent, "Share via"))
-                    },
+                    onShareClick = { showShare = true },
                     onMovieClick = { movieId ->
                         navController?.navigate(Screen.MoviePage.createRoute(movieId))
                     }
@@ -209,7 +204,6 @@ fun ShotItem(
     realCommentCount: Int = 0,  // Real comment count from database
     onLikeClick: () -> Unit = {},
     onCommentClick: () -> Unit = {},
-    onShareClick: () -> Unit = {},
     onShareClick: () -> Unit = {},
     onMovieClick: (Int) -> Unit = {}
 ) {
@@ -382,7 +376,6 @@ fun ShotItem(
             ShotActionButton(
                 icon = Icons.Default.Share,
                 count = shot.shareCount,
-                onClick = onShareClick
                 onClick = onShareClick
             )
         }
