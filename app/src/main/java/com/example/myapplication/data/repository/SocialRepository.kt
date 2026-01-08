@@ -53,6 +53,7 @@ class SocialRepository(private val dao: SocialDao) {
         dao.getFriendshipStatus(user1, user2)
     
     fun getFriendsCount(userId: String): Flow<Int> = dao.getFriendsCount(userId)
+    fun getFriends(userId: String): Flow<List<String>> = dao.getFriends(userId)
     fun getPendingFriendRequests(userId: String): Flow<List<String>> = dao.getPendingFriendRequests(userId)
     suspend fun hasPendingRequest(fromUser: String, toUser: String): Boolean = dao.hasPendingRequest(fromUser, toUser)
 }

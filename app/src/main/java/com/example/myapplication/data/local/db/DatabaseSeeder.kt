@@ -1117,7 +1117,7 @@ object DatabaseSeeder {
     private suspend fun seedSampleNotifications(
         notificationDao: com.example.myapplication.data.local.dao.NotificationDao
     ) {
-        val currentUserId = "guest_user" // Must match UserSessionManager.GUEST_USER_ID
+        val currentUserId = "user_demo" 
         val currentTime = System.currentTimeMillis()
         
         val sampleNotifications = listOf(
@@ -1315,12 +1315,7 @@ object DatabaseSeeder {
             socialDao.follow(com.example.myapplication.data.local.entities.Follow(demoUserId, userId))
         }
         
-        // 3. Additional followers (12 - 6 = 6 more synthetic followers)
-        repeat(6) { i ->
-            val syntheticFollower = "synth_demo_follower_$i"
-            socialDao.follow(com.example.myapplication.data.local.entities.Follow(syntheticFollower, demoUserId))
-        }
-        
+
         // 4. Create 1 album with 12 movies
         val demoAlbumId = albumDao.insertAlbum(com.example.myapplication.data.local.entities.Album(
             ownerId = demoUserId,

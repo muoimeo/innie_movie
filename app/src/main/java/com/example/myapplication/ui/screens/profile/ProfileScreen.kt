@@ -155,7 +155,10 @@ fun ProfileScreen(
                         movies = showcaseMovies,
                         navController = navController,
                         isOwnProfile = isOwnProfile,
-                        onNavigateToSearch = onNavigateToSearch,
+                        onNavigateToSearch = { slotIndex ->
+                            // Navigate to search screen for adding to showcase
+                            navController.navigate(Screen.SearchForShowcase.createRoute(slotIndex))
+                        },
                         onRemoveFavorite = { movieId ->
                             // Remove from showcase only (doesn't unlike)
                             showcaseScope.launch {
@@ -764,7 +767,7 @@ fun FavoriteFilmSlots(
     movies: List<com.example.myapplication.data.local.entities.Movie>,
     navController: NavController,
     isOwnProfile: Boolean = true,
-    onNavigateToSearch: () -> Unit,
+    onNavigateToSearch: (Int) -> Unit, 
     onRemoveFavorite: (Int) -> Unit = {}
 ) {
     var showRemoveDialog by remember { mutableStateOf(false) }
@@ -862,7 +865,7 @@ fun FavoriteFilmSlots(
                             .then(
                                 if (isOwnProfile) {
                                     Modifier.clickable {
-                                        onNavigateToSearch()
+                                        onNavigateToSearch(index)
                                     }
                                 } else Modifier
                             ),

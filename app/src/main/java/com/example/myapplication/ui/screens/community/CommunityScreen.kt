@@ -74,8 +74,14 @@ fun CommunityContent(
     }.collectAsState(initial = emptyList())
     
     // Friends reviews - dynamically fetch friends and their reviews
-    val friendIds by remember { kotlinx.coroutines.flow.flowOf(emptyList<String>()) }.collectAsState(initial = emptyList()) // TODO: Add getFriends query
-    val friendsReviews = emptyList<ReviewWithMovie>() // Empty for now
+    val friendIds by socialRepository.getFriends(currentUserId).collectAsState(initial = emptyList())
+    val friendsReviews by remember(friendIds) {
+        if (friendIds.isEmpty()) {
+            kotlinx.coroutines.flow.flowOf(emptyList<ReviewWithMovie>())
+        } else {
+            database.reviewDao().getReviewsByAuthorsWithMovies(friendIds, 50)
+        }
+    }.collectAsState(initial = emptyList())
 
     Column(
         modifier = modifier

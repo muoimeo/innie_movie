@@ -62,7 +62,7 @@ import com.example.myapplication.data.local.dao.ShowcaseDao
         Friendship::class,
         ShowcaseMovie::class
     ],
-    version = 37,
+    version = 39,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

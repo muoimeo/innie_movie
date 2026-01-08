@@ -46,4 +46,9 @@ sealed class Screen(val route: String) {
     data object UserProfile : Screen("user_profile/{userId}") {
         fun createRoute(userId: String) = "user_profile/$userId"
     }
+    
+    // Search for adding to showcase (with slot position)
+    data object SearchForShowcase : Screen("search_for_showcase/{slotPosition}") {
+        fun createRoute(slotPosition: Int) = "search_for_showcase/$slotPosition"
+    }
 }

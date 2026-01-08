@@ -214,6 +214,18 @@ class MainActivity : ComponentActivity() {
                             navController = navController
                         )
                     }
+                    
+                    // Search for Showcase - select movie to add to profile showcase slot
+                    composable(
+                        route = Screen.SearchForShowcase.route,
+                        arguments = listOf(navArgument("slotPosition") { type = NavType.IntType })
+                    ) { backStackEntry ->
+                        val slotPosition = backStackEntry.arguments?.getInt("slotPosition") ?: 0
+                        com.example.myapplication.ui.screens.search.SearchForShowcaseScreen(
+                            slotPosition = slotPosition,
+                            navController = navController
+                        )
+                    }
                     composable(Profile.WatchHistory.route) {
                         WatchHistoryScreen(navController = navController)
                     }
