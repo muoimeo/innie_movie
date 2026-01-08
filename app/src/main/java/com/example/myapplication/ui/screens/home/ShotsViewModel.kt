@@ -42,6 +42,10 @@ class ShotsViewModel(application: Application) : AndroidViewModel(application) {
     private val _likedShots = MutableStateFlow<Set<Int>>(emptySet())
     val likedShots: StateFlow<Set<Int>> = _likedShots.asStateFlow()
     
+    // Real comment counts for shots (from database)
+    private val _shotCommentCounts = MutableStateFlow<Map<Int, Int>>(emptyMap())
+    val shotCommentCounts: StateFlow<Map<Int, Int>> = _shotCommentCounts.asStateFlow()
+    
     init {
         initializeData()
     }
@@ -71,12 +75,17 @@ class ShotsViewModel(application: Application) : AndroidViewModel(application) {
                 
                 // Load liked status for all shots
                 val liked = mutableSetOf<Int>()
+                val commentCounts = mutableMapOf<Int, Int>()
                 shotsList.forEach { shot ->
                     if (likeRepository.isLiked(currentUserId, "shot", shot.id)) {
                         liked.add(shot.id)
                     }
+                    // Load real comment count from database
+                    val realCommentCount = database.commentDao().countCommentsForContent("shot", shot.id)
+                    commentCounts[shot.id] = realCommentCount
                 }
                 _likedShots.value = liked
+                _shotCommentCounts.value = commentCounts
             }
         }
     }

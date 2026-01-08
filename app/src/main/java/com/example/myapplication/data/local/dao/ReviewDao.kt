@@ -75,5 +75,9 @@ interface ReviewDao {
     @Transaction
     @Query("SELECT * FROM reviews WHERE authorId IN (:authorIds) ORDER BY createdAt DESC LIMIT :limit")
     fun getReviewsByAuthorsWithMovies(authorIds: List<String>, limit: Int = 50): Flow<List<ReviewWithMovie>>
+    
+    // Get existing review IDs for seeding comments (sync)
+    @Query("SELECT id FROM reviews ORDER BY createdAt DESC")
+    suspend fun getReviewIdsSync(): List<Int>
 }
 

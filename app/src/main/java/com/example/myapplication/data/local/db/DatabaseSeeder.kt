@@ -840,6 +840,7 @@ object DatabaseSeeder {
         val likeDao = database.likeDao()
         val albumDao = database.albumDao()
         val reviewDao = database.reviewDao()
+        val commentDao = database.commentDao()
         val random = java.util.Random()
 
         sampleUserIds.forEach { userId ->
@@ -889,13 +890,55 @@ object DatabaseSeeder {
                  likeDao.like(com.example.myapplication.data.local.entities.Like(userId, "movie", movieId))
             }
 
-            // Albums seeded separately in seedUserAlbums with real movie content
+            // 6. Synthetic Album Likes with FIXED high counts per album
+            // Using direct insertion loops to guarantee hundreds of likes per album
+            val albumLikeCounts = mapOf(
+                1 to 30,    // Each user adds 30 likes to Album 1 → 15 users × 30 = 450
+                2 to 25,    // Album 2: 375 likes
+                3 to 20,    // Album 3: 300 likes  
+                4 to 15,    // Album 4: 225 likes
+                5 to 12,    // Album 5: 180 likes
+                6 to 10,    // Album 6: 150 likes
+                7 to 8      // Album 7: 120 likes
+            )
+            albumLikeCounts.forEach { (albumId, count) ->
+                repeat(count) { i ->
+                    val fakeUserId = "user_synth_album${albumId}_liker_${userId}_$i"
+                    likeDao.like(com.example.myapplication.data.local.entities.Like(fakeUserId, "album", albumId))
+                }
+            }
             
-            // 7. Synthetic Reviews (1-4)
+            // 7. Synthetic Album Comments (5-10 per user per popular album)
+            val commentTemplates = listOf(
+                "Love this collection! 🎬",
+                "Great picks!",
+                "Exactly my taste",
+                "Can't wait to watch these",
+                "Perfect list 👌",
+                "Amazing curation!",
+                "Adding to my watchlist",
+                "Finally someone gets it!",
+                "These are all classics",
+                "Best albums on the app"
+            )
+            (1..7).forEach { albumId ->
+                if (random.nextFloat() < 0.6f) { // 60% chance to comment
+                    commentDao.insert(com.example.myapplication.data.local.entities.Comment(
+                        userId = userId,
+                        targetType = "album",
+                        targetId = albumId,
+                        content = commentTemplates.random(),
+                        createdAt = System.currentTimeMillis() - random.nextInt(100000000)
+                    ))
+                }
+            }
+            
+            // 8. Synthetic Reviews FIRST (1-4) - must be created before comments
             val reviewCount = 1 + random.nextInt(4)
             val reviewMovies = likedMovies.take(reviewCount) // Review movies they liked
+            val createdReviewIds = mutableListOf<Long>()
             reviewMovies.forEach { movieId ->
-                 reviewDao.insert(com.example.myapplication.data.local.entities.Review(
+                val reviewId = reviewDao.insert(com.example.myapplication.data.local.entities.Review(
                     authorId = userId,
                     movieId = movieId,
                     rating = (3 + random.nextInt(3)).toFloat(), // 3-5 stars
@@ -903,6 +946,34 @@ object DatabaseSeeder {
                     body = "This was a really interesting film. The cinematography was great and the acting was top notch. Highly recommended!",
                     createdAt = System.currentTimeMillis() - random.nextInt(100000000)
                 ))
+                createdReviewIds.add(reviewId)
+            }
+            
+            // 9. Synthetic Review Comments for ALL reviews that exist (using actual review IDs)
+            val reviewCommentTemplates = listOf(
+                "Great review! 👏",
+                "Totally agree with this",
+                "Well written!",
+                "This helped me decide to watch it",
+                "Exactly what I was thinking",
+                "Nice perspective!",
+                "I disagree but respect your opinion",
+                "You should check out the sequel too",
+                "The director's cut is even better!",
+                "Thanks for this review!"
+            )
+            // Comment on reviews from OTHER users (not our own)
+            val existingReviews = reviewDao.getReviewIdsSync()
+            existingReviews.take(10).forEach { reviewId ->
+                if (random.nextFloat() < 0.7f) { // 70% chance to comment on each review
+                    commentDao.insert(com.example.myapplication.data.local.entities.Comment(
+                        userId = userId,
+                        targetType = "review",
+                        targetId = reviewId,
+                        content = reviewCommentTemplates.random(),
+                        createdAt = System.currentTimeMillis() - random.nextInt(100000000)
+                    ))
+                }
             }
         }
     }

@@ -45,6 +45,21 @@ interface AlbumDao {
     @Query("SELECT * FROM albums WHERE privacy = 'public' ORDER BY createdAt DESC")
     fun getPublicAlbums(): Flow<List<Album>>
     
+    // Get popular public albums sorted by like count (descending)
+    @Query("""
+        SELECT a.* FROM albums a
+        LEFT JOIN (
+            SELECT targetId, COUNT(*) as likeCount 
+            FROM likes 
+            WHERE targetType = 'album' 
+            GROUP BY targetId
+        ) l ON a.id = l.targetId
+        WHERE a.privacy = 'public'
+        ORDER BY COALESCE(l.likeCount, 0) DESC
+        LIMIT :limit
+    """)
+    fun getPopularAlbumsByLikes(limit: Int = 10): Flow<List<Album>>
+    
     // Count albums created by user
     @Query("SELECT COUNT(*) FROM albums WHERE ownerId = :userId")
     fun countAlbumsByUser(userId: String): Flow<Int>

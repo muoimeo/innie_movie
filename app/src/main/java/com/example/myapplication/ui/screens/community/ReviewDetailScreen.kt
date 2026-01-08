@@ -47,6 +47,7 @@ import com.example.myapplication.ui.theme.InnieGreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.myapplication.ui.components.CommentBottomSheet
 
 /**
  * ReviewDetailScreen - Shows full review content.
@@ -67,6 +68,10 @@ fun ReviewDetailScreen(
     // Snackbar state
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    
+    // Comment bottom sheet state
+    var showComments by remember { mutableStateOf(false) }
+    var commentCount by remember { mutableIntStateOf(0) }
     
     // Database
     val db = remember { DatabaseProvider.getDatabase(context) }
@@ -89,6 +94,9 @@ fun ReviewDetailScreen(
                 
                 // Log view for watch history
                 userActivityRepository.logView(userId, "review", reviewId)
+                
+                // Load comment count
+                commentCount = db.commentDao().countCommentsForContent("review", reviewId)
             }
         }
     }
@@ -447,19 +455,19 @@ fun ReviewDetailScreen(
                     HorizontalDivider(color = Color(0xFFE0E0E0))
                     Spacer(modifier = Modifier.height(16.dp))
                     
-                    // Tab chips: Comments and Film only (no Activity)
+                    // Tab chips: Comments and Film only (no Activity) - comments chip NOT clickable now
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // Comments chip
+                        // Comments chip - just shows count, not clickable
                         Box(
                             modifier = Modifier
                                 .border(1.dp, InnieGreen, RoundedCornerShape(20.dp))
                                 .padding(horizontal = 16.dp, vertical = 8.dp)
                         ) {
                             Text(
-                                text = "0 comments",
+                                text = "$commentCount comments",
                                 fontSize = 13.sp,
                                 color = InnieGreen,
                                 fontWeight = FontWeight.Medium
@@ -497,7 +505,7 @@ fun ReviewDetailScreen(
                     
                     Spacer(modifier = Modifier.height(24.dp))
                     
-                    // Comments section
+                    // Comments section header
                     Text(
                         text = "Comments",
                         fontSize = 16.sp,
@@ -507,32 +515,111 @@ fun ReviewDetailScreen(
                     
                     Spacer(modifier = Modifier.height(12.dp))
                     
-                    // Empty comments state
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 24.dp),
-                        contentAlignment = Alignment.Center
+                    // Inline comments list - loaded from database
+                    var comments by remember { mutableStateOf<List<com.example.myapplication.data.local.entities.Comment>>(emptyList()) }
+                    var newCommentText by remember { mutableStateOf("") }
+                    
+                    // Load comments
+                    LaunchedEffect(reviewId, commentCount) {
+                        withContext(Dispatchers.IO) {
+                            db.commentDao().getComments("review", reviewId).collect { list ->
+                                withContext(Dispatchers.Main) {
+                                    comments = list
+                                }
+                            }
+                        }
+                    }
+                    
+                    if (comments.isEmpty()) {
+                        // Empty state
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.ChatBubbleOutline,
+                                    contentDescription = null,
+                                    tint = Color.LightGray,
+                                    modifier = Modifier.size(40.dp)
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "No comments yet",
+                                    fontSize = 14.sp,
+                                    color = Color.Gray
+                                )
+                                Text(
+                                    text = "Be the first to comment!",
+                                    fontSize = 12.sp,
+                                    color = Color.Gray.copy(alpha = 0.7f)
+                                )
+                            }
+                        }
+                    } else {
+                        // Display comments inline
+                        comments.forEach { comment ->
+                            ReviewCommentItem(
+                                comment = comment,
+                                db = db
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
+                    // Add comment input
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
+                        OutlinedTextField(
+                            value = newCommentText,
+                            onValueChange = { newCommentText = it },
+                            placeholder = { Text("Add a comment...", fontSize = 14.sp) },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = InnieGreen,
+                                unfocusedBorderColor = Color.LightGray
+                            ),
+                            singleLine = true
+                        )
+                        
+                        Spacer(modifier = Modifier.width(8.dp))
+                        
+                        IconButton(
+                            onClick = {
+                                if (newCommentText.isNotBlank()) {
+                                    scope.launch {
+                                        withContext(Dispatchers.IO) {
+                                            db.commentDao().insert(
+                                                com.example.myapplication.data.local.entities.Comment(
+                                                    userId = userId,
+                                                    targetType = "review",
+                                                    targetId = reviewId,
+                                                    content = newCommentText.trim(),
+                                                    createdAt = System.currentTimeMillis()
+                                                )
+                                            )
+                                            // Refresh count
+                                            commentCount = db.commentDao().countCommentsForContent("review", reviewId)
+                                        }
+                                        newCommentText = ""
+                                    }
+                                }
+                            },
+                            enabled = newCommentText.isNotBlank()
                         ) {
                             Icon(
-                                imageVector = Icons.Outlined.ChatBubbleOutline,
-                                contentDescription = null,
-                                tint = Color.LightGray,
-                                modifier = Modifier.size(40.dp)
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "No comments yet",
-                                fontSize = 14.sp,
-                                color = Color.Gray
-                            )
-                            Text(
-                                text = "Be the first to comment!",
-                                fontSize = 12.sp,
-                                color = Color.Gray.copy(alpha = 0.7f)
+                                imageVector = Icons.Default.Send,
+                                contentDescription = "Send",
+                                tint = if (newCommentText.isNotBlank()) InnieGreen else Color.Gray
                             )
                         }
                     }
@@ -540,6 +627,69 @@ fun ReviewDetailScreen(
                     Spacer(modifier = Modifier.height(100.dp))
                 }
             }
+        }
+    }
+}
+
+// Inline comment item for ReviewDetailScreen
+@Composable
+fun ReviewCommentItem(
+    comment: com.example.myapplication.data.local.entities.Comment,
+    db: com.example.myapplication.data.local.db.AppDatabase
+) {
+    var authorName by remember { mutableStateOf("") }
+    
+    LaunchedEffect(comment.userId) {
+        kotlinx.coroutines.withContext(Dispatchers.IO) {
+            val user = db.userDao().getUserById(comment.userId)
+            authorName = user?.displayName ?: user?.username ?: comment.userId.replace("user_", "").replaceFirstChar { it.uppercase() }
+        }
+    }
+    
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Top
+    ) {
+        // Avatar
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CircleShape)
+                .background(Color(0xFF4A5568)),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = comment.userId.take(1).uppercase(),
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp
+            )
+        }
+        
+        Spacer(modifier = Modifier.width(10.dp))
+        
+        Column(modifier = Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = authorName.ifBlank { "User" },
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF1A1A1A)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = formatReviewTime(comment.createdAt).replace("Reviewed ", ""),
+                    fontSize = 11.sp,
+                    color = Color.Gray
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = comment.content,
+                fontSize = 13.sp,
+                color = Color(0xFF333333),
+                lineHeight = 18.sp
+            )
         }
     }
 }

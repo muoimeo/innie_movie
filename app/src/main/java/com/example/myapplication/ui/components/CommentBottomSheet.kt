@@ -249,6 +249,14 @@ fun CommentBottomSheet(
                                     comments = updatedComments
                                     commentCount = updatedComments.size
                                     
+                                    // Set 0 likes for new comments (find comment by content match)
+                                    val newlyAddedComment = updatedComments.find { 
+                                        it.userId == currentUserId && it.content == newComment.content 
+                                    }
+                                    newlyAddedComment?.let { c ->
+                                        commentLikes = commentLikes + (c.id to 0)
+                                    }
+                                    
                                     // Get user for new comment
                                     if (!users.containsKey(currentUserId)) {
                                         db.userDao().getUserById(currentUserId)?.let { user ->

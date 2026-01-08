@@ -41,46 +41,22 @@ import kotlin.math.roundToInt
 
 @Composable
 fun NewsFeed(
+    searchQuery: String = "",
     onNewsClick: (News) -> Unit = {},
     showHeroFullScreen: Boolean = false,
     newsViewModel: NewsViewModel = viewModel()
 ) {
     val news by newsViewModel.news.collectAsState()
     val isLoading by newsViewModel.isLoading.collectAsState()
-    var searchQuery by remember { mutableStateOf("") }
-    var showFilterSheet by remember { mutableStateOf(false) }
-    var newsFilterState by remember { mutableStateOf(NewsFilterState()) }
     
-    // Collapsing search bar logic
-    val searchBarHeight = 60.dp
-    val searchBarHeightPx = with(LocalDensity.current) { searchBarHeight.toPx() }
-    var searchBarOffsetHeightPx by remember { mutableFloatStateOf(0f) }
-    
-    // Smoothly scroll away the search bar
-    val nestedScrollConnection = remember {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                // Calculation: change offset based on scroll amount
-                val delta = available.y
-                val newOffset = searchBarOffsetHeightPx + delta
-                searchBarOffsetHeightPx = newOffset.coerceIn(-searchBarHeightPx, 0f)
-                return Offset.Zero // Don't consume the scroll, let lazy column have it
-            }
-        }
+    // React to search query changes
+    LaunchedEffect(searchQuery) {
+        newsViewModel.searchNews(searchQuery)
     }
     
-    // Show filter bottom sheet
-    if (showFilterSheet) {
-        NewsFilterBottomSheet(
-            filterState = newsFilterState,
-            onFilterChange = { newsFilterState = it },
-            onApplyFilter = {
-                showFilterSheet = false
-                // TODO: Apply filter logic to news list via ViewModel
-            },
-            onDismiss = { showFilterSheet = false }
-        )
-    }
+    // Show filter bottom sheet - kept locally if needed, but UI removed for now as requested
+    // var showFilterSheet by remember { mutableStateOf(false) }
+    // var newsFilterState by remember { mutableStateOf(NewsFilterState()) }
     
     if (isLoading) {
         Box(
@@ -91,68 +67,116 @@ fun NewsFeed(
         }
         return
     }
+    // Check if we are in search mode
+    val isSearching = searchQuery.isNotBlank()
     
-    Scaffold(
-        topBar = {
-            if (!showHeroFullScreen) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = Color(0xFFF8F9FA)
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF8F9FA))
+    ) {
+        if (news.isEmpty() && isSearching) {
+            // Empty search results
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        SearchAndFilterBar(
-                            searchQuery = searchQuery,
-                            onSearchChange = { 
-                                searchQuery = it
-                                newsViewModel.searchNews(it)
-                            },
-                            onFilterClick = { showFilterSheet = true }
-                        )
-                    }
-                }
-            }
-        },
-        containerColor = Color(0xFFF8F9FA)
-    ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues),
-            contentPadding = PaddingValues(bottom = 100.dp)
-        ) {
-            // Featured Hero Section - use first news item
-            item {
-                if (news.isNotEmpty()) {
-                    FeaturedHeroSection(
-                        news = news.first(),
-                        isFullScreen = showHeroFullScreen,
-                        onClick = { onNewsClick(news.first()) }
+                    Icon(
+                        imageVector = Icons.Default.Search,
+                        contentDescription = null,
+                        tint = Color.LightGray,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = "No matching content",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color.Gray
+                    )
+                    Text(
+                        text = "Try a different search term",
+                        fontSize = 14.sp,
+                        color = Color.Gray.copy(alpha = 0.7f)
                     )
                 }
             }
-            
-            // Featured Header with dividers
-            item {
-                FeaturedHeader()
-            }
-            
-            // News Articles List (skip first one since it's the hero)
-            items(news.drop(1)) { article ->
-                NewsArticleCard(
-                    news = article,
-                    onClick = { onNewsClick(article) }
-                )
-                
-                // Divider between articles
-                HorizontalDivider(
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-                    thickness = 0.5.dp,
-                    color = Color.LightGray.copy(alpha = 0.5f)
-                )
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(bottom = 100.dp)
+            ) {
+                if (!isSearching && news.isNotEmpty()) {
+                    // Featured Hero Section - only when NOT searching
+                    item {
+                        FeaturedHeroSection(
+                            news = news.first(),
+                            isFullScreen = showHeroFullScreen,
+                            onClick = { onNewsClick(news.first()) }
+                        )
+                    }
+                    
+                    // Featured Header
+                    item {
+                        FeaturedHeader()
+                    }
+                    
+                    // News Articles List (skip first one since it's the hero)
+                    items(news.drop(1)) { article ->
+                        NewsArticleCard(
+                            news = article,
+                            onClick = { onNewsClick(article) }
+                        )
+                        
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                            thickness = 0.5.dp,
+                            color = Color.LightGray.copy(alpha = 0.5f)
+                        )
+                    }
+                } else {
+                    // Search mode: Search results header
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 170.dp, bottom = 12.dp, start = 20.dp, end = 20.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .width(4.dp)
+                                        .height(20.dp)
+                                        .background(InnieGreen, RoundedCornerShape(2.dp))
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = "Search Results (${news.size})",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF1A1A1A)
+                                )
+                            }
+                        }
+                    }
+                    
+                    // All search results as normal article cards
+                    items(news) { article ->
+                        NewsArticleCard(
+                            news = article,
+                            onClick = { onNewsClick(article) }
+                        )
+                        
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                            thickness = 0.5.dp,
+                            color = Color.LightGray.copy(alpha = 0.5f)
+                        )
+                    }
+                }
             }
         }
     }
@@ -350,68 +374,45 @@ fun SearchAndFilterBar(
     onSearchChange: (String) -> Unit,
     onFilterClick: () -> Unit = {}
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    // Search Box - full width (removed filter button)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(44.dp)
+            .background(Color.White, RoundedCornerShape(22.dp))
+            .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(22.dp))
+            .padding(horizontal = 16.dp),
+        contentAlignment = Alignment.CenterStart
     ) {
-        // Search Box
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .height(44.dp)
-                .background(Color.White, RoundedCornerShape(22.dp))
-                .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(22.dp))
-                .padding(horizontal = 16.dp),
-            contentAlignment = Alignment.CenterStart
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Search,
-                    contentDescription = "Search",
-                    tint = Color.Gray,
-                    modifier = Modifier.size(20.dp)
-                )
-                
-                Spacer(modifier = Modifier.width(8.dp))
-                
-                androidx.compose.foundation.text.BasicTextField(
-                    value = searchQuery,
-                    onValueChange = onSearchChange,
-                    singleLine = true,
-                    textStyle = androidx.compose.ui.text.TextStyle(
-                        fontSize = 14.sp,
-                        color = Color.Black
-                    ),
-                    decorationBox = { innerTextField ->
-                        if (searchQuery.isEmpty()) {
-                            Text(
-                                text = "Search news...",
-                                fontSize = 14.sp,
-                                color = Color.Gray
-                            )
-                        }
-                        innerTextField()
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                )
-            }
-        }
-        
-        // Filter Button
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .background(Color.White, CircleShape)
-                .border(1.dp, Color(0xFFE0E0E0), CircleShape)
-                .clickable { onFilterClick() },
-            contentAlignment = Alignment.Center
-        ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                imageVector = Icons.Outlined.FilterList,
-                contentDescription = "Filter",
-                tint = Color(0xFF1A1A1A),
+                imageVector = Icons.Default.Search,
+                contentDescription = "Search",
+                tint = Color.Gray,
                 modifier = Modifier.size(20.dp)
+            )
+            
+            Spacer(modifier = Modifier.width(8.dp))
+            
+            androidx.compose.foundation.text.BasicTextField(
+                value = searchQuery,
+                onValueChange = onSearchChange,
+                singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    fontSize = 14.sp,
+                    color = Color.Black
+                ),
+                decorationBox = { innerTextField ->
+                    if (searchQuery.isEmpty()) {
+                        Text(
+                            text = "Search news...",
+                            fontSize = 14.sp,
+                            color = Color.Gray
+                        )
+                    }
+                    innerTextField()
+                },
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }

@@ -25,97 +25,48 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.example.myapplication.R
+import com.example.myapplication.data.local.entities.Album
 import com.example.myapplication.data.local.entities.Movie
+import com.example.myapplication.data.local.entities.ReviewWithMovie
 import com.example.myapplication.ui.theme.InnieGreen
-
-// Fake data models
-data class FakeMovie(
-    val id: String,
-    val title: String,
-    val posterRes: Int
-)
-
-data class FakeAlbum(
-    val id: String,
-    val title: String,
-    val author: String,
-    val posterRes: Int,
-    val likeCount: Int,
-    val commentCount: Int
-)
-
-data class FakeReview(
-    val id: String,
-    val movieTitle: String,
-    val movieYear: String,
-    val authorName: String,
-    val rating: Float,
-    val reviewText: String,
-    val posterRes: Int
-)
-
-// Fake data
-val fakeMovies = listOf(
-    FakeMovie("1", "Inception", R.drawable.onboarding_bg),
-    FakeMovie("2", "The Dark Knight", R.drawable.onboarding_bg),
-    FakeMovie("3", "Interstellar", R.drawable.onboarding_bg),
-    FakeMovie("4", "The French Dispatch", R.drawable.onboarding_bg),
-    FakeMovie("5", "The Power", R.drawable.onboarding_bg),
-    FakeMovie("6", "Don't Look Up", R.drawable.onboarding_bg)
-)
-
-val fakeAlbums = listOf(
-    FakeAlbum("1", "Life-Changing Movies", "Alejandro", R.drawable.onboarding_bg, 42, 12),
-    FakeAlbum("2", "100 Best Thriller Movies", "Wendy", R.drawable.onboarding_bg, 128, 34),
-    FakeAlbum("3", "Comfort Movies To Watch", "Ruth", R.drawable.onboarding_bg, 89, 21)
-)
-
-val fakeReviews = listOf(
-    FakeReview(
-        "1", "The Irishman", "2019", "Adrian", 4.5f,
-        "not sure i've ever mentioned this before but i have a very personal fear of not... feeling... correctly. like enormously important things are happening around you in a matter-of-fact, dissociative way that you can understand the significance of but you can't shake...",
-        R.drawable.onboarding_bg
-    ),
-    FakeReview(
-        "2", "Zack Snyder's Justice League", "2021", "Audrey", 4.0f,
-        "the interesting thing about snyder is that he always swings big. whether it results in a colossal whiff or a home run just depends on the particular project, amount of creative control, and audience reception...",
-        R.drawable.onboarding_bg
-    ),
-    FakeReview(
-        "3", "tick, tick...BOOM!", "2021", "Rebecca", 3.0f,
-        "Andrew Garfield gives an incredible performance in this deeply personal story...",
-        R.drawable.onboarding_bg
-    )
-)
+import kotlinx.coroutines.launch
 
 @Composable
 fun HomeFeed(
     username: String,
     movies: List<Movie> = emptyList(), // Movies from database
     onMovieClick: (Int) -> Unit,
-    onAlbumClick: (String) -> Unit,
-    onReviewClick: (String) -> Unit,
-    onProfileClick: (String) -> Unit
+    onAlbumClick: (Int) -> Unit,  // Changed to Int for album ID
+    onReviewClick: (Int) -> Unit, // Changed to Int for review ID
+    onProfileClick: (String) -> Unit,
+    onSeeMoreReviews: () -> Unit = {},
+    onSeeMoreAlbums: () -> Unit = {},  // New callback for navigating to AlbumFeed
+    homeViewModel: HomeViewModel = viewModel()
 ) {
+    val popularAlbums by homeViewModel.popularAlbums.collectAsState()
+    val popularReviews by homeViewModel.popularReviews.collectAsState()
+    
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(bottom = 16.dp)
@@ -163,7 +114,7 @@ fun HomeFeed(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Use database movies if available, fallback to fakeMovies
+                // Use database movies if available
                 if (movies.isNotEmpty()) {
                     items(movies.take(10)) { movie ->
                         MoviePosterCardDb(
@@ -171,46 +122,125 @@ fun HomeFeed(
                             onClick = { onMovieClick(movie.id) }
                         )
                     }
-                } else {
-                    items(fakeMovies) { movie ->
-                        MoviePosterCard(
-                            movie = movie,
-                            onClick = { onMovieClick(movie.posterRes) }
+                }
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        // Popular Albums Section - from database (limited to 4, sorted by likes)
+        item {
+            SectionHeader(title = "Popular Albums This Month")
+            if (popularAlbums.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(150.dp)
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No albums yet", color = Color.Gray)
+                }
+            } else {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Limit to 4 albums
+                    items(popularAlbums.take(4)) { album ->
+                        AlbumCardDb(
+                            album = album,
+                            homeViewModel = homeViewModel,
+                            onClick = { onAlbumClick(album.id) }
                         )
+                    }
+                    
+                    // "See more in album" button
+                    if (popularAlbums.size > 4) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .width(140.dp)
+                                    .height(180.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color(0xFFF0F0F0))
+                                    .clickable { onSeeMoreAlbums() },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "See more",
+                                        fontWeight = FontWeight.Bold,
+                                        color = InnieGreen,
+                                        fontSize = 14.sp
+                                    )
+                                    Text(
+                                        text = "in Album →",
+                                        fontWeight = FontWeight.Bold,
+                                        color = InnieGreen,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        // Popular Albums Section
+        // Popular Reviews Section - from database
         item {
-            SectionHeader(title = "Popular Albums This Month")
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(fakeAlbums) { album ->
-                    AlbumCard(
-                        album = album,
-                        onClick = { onAlbumClick(album.id) }
-                    )
+            SectionHeader(title = "Popular Reviews")
+        }
+
+        if (popularReviews.isEmpty()) {
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp)
+                        .padding(horizontal = 16.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("No reviews yet", color = Color.Gray)
                 }
             }
-            Spacer(modifier = Modifier.height(24.dp))
-        }
-
-        // Recent Friends' Review Section
-        item {
-            SectionHeader(title = "Recent Friends' Review")
-        }
-
-        items(fakeReviews) { review ->
-            ReviewCard(
-                review = review,
-                onClick = { onReviewClick(review.id) },
-                onProfileClick = { onProfileClick(review.authorName) }
-            )
+        } else {
+            // Limit to at most 4 reviews
+            items(popularReviews.take(4)) { reviewWithMovie ->
+                ReviewCardDb(
+                    reviewWithMovie = reviewWithMovie,
+                    homeViewModel = homeViewModel,
+                    onClick = { onReviewClick(reviewWithMovie.review.id) },
+                    onProfileClick = { onProfileClick(reviewWithMovie.review.authorId) }
+                )
+            }
+            
+            // "See more reviews" button
+            if (popularReviews.size > 4) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "See more reviews >",
+                            style = MaterialTheme.typography.bodyMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = InnieGreen
+                            ),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(20.dp))
+                                .clickable(onClick = onSeeMoreReviews)
+                                .padding(horizontal = 24.dp, vertical = 8.dp)
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -227,24 +257,7 @@ fun SectionHeader(title: String) {
     )
 }
 
-@Composable
-fun MoviePosterCard(
-    movie: FakeMovie,
-    onClick: () -> Unit
-) {
-    Image(
-        painter = painterResource(id = movie.posterRes),
-        contentDescription = movie.title,
-        contentScale = ContentScale.Crop,
-        modifier = Modifier
-            .width(100.dp)
-            .height(150.dp)
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-    )
-}
-
-// New composable for database movies with Coil
+// Movie poster card using database Movie entity
 @Composable
 fun MoviePosterCardDb(
     movie: Movie,
@@ -267,11 +280,32 @@ fun MoviePosterCardDb(
     }
 }
 
+// Album card using database Album entity
 @Composable
-fun AlbumCard(
-    album: FakeAlbum,
+fun AlbumCardDb(
+    album: Album,
+    homeViewModel: HomeViewModel,
     onClick: () -> Unit
 ) {
+    val coroutineScope = rememberCoroutineScope()
+    
+    // Load album data
+    var ownerName by remember { mutableStateOf("") }
+    var ownerAvatar by remember { mutableStateOf<String?>(null) }
+    var likeCount by remember { mutableIntStateOf(0) }
+    var commentCount by remember { mutableIntStateOf(0) }
+    var albumMovies by remember { mutableStateOf<List<Movie>>(emptyList()) }
+    
+    LaunchedEffect(album.id) {
+        coroutineScope.launch {
+            ownerName = homeViewModel.getAlbumOwnerName(album.ownerId)
+            ownerAvatar = homeViewModel.getUserAvatar(album.ownerId)
+            likeCount = homeViewModel.getAlbumLikeCount(album.id)
+            commentCount = homeViewModel.getAlbumCommentCount(album.id)
+            albumMovies = homeViewModel.getAlbumMovies(album.id)
+        }
+    }
+    
     Card(
         modifier = Modifier
             .width(140.dp)
@@ -280,69 +314,63 @@ fun AlbumCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column {
-            // Stacked posters - 4 ảnh xếp ngang từ trái sang phải, cùng độ cao
+            // Album cover - show first movie poster or stacked posters
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(110.dp)
             ) {
-                val posterWidth = 70.dp
-                val posterHeight = 100.dp
-                val overlapOffset = 20.dp
-                
-                // Poster 4 (Dưới cùng - Bên phải)
-                Image(
-                    painter = painterResource(id = album.posterRes),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .width(posterWidth)
-                        .height(posterHeight)
-                        .offset(x = overlapOffset * 3, y = 0.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                )
-                // Poster 3
-                Image(
-                    painter = painterResource(id = album.posterRes),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .width(posterWidth)
-                        .height(posterHeight)
-                        .offset(x = overlapOffset * 2, y = 0.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                )
-                // Poster 2
-                Image(
-                    painter = painterResource(id = album.posterRes),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .width(posterWidth)
-                        .height(posterHeight)
-                        .offset(x = overlapOffset * 1, y = 0.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                )
-                // Poster 1 (Trên cùng - Bên trái)
-                Image(
-                    painter = painterResource(id = album.posterRes),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .width(posterWidth)
-                        .height(posterHeight)
-                        .offset(x = 0.dp, y = 0.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                )
+                if (albumMovies.isNotEmpty()) {
+                    // Show stacked movie posters (up to 4)
+                    val posterWidth = 70.dp
+                    val posterHeight = 100.dp
+                    val overlapOffset = 20.dp
+                    
+                    // Show up to 4 movies stacked
+                    albumMovies.take(4).forEachIndexed { index, movie ->
+                        val reverseIndex = minOf(albumMovies.size, 4) - 1 - index
+                        AsyncImage(
+                            model = movie.posterUrl,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .width(posterWidth)
+                                .height(posterHeight)
+                                .offset(x = overlapOffset * reverseIndex, y = 0.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                        )
+                    }
+                } else if (album.coverUrl != null) {
+                    // Show album cover
+                    AsyncImage(
+                        model = album.coverUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(8.dp))
+                    )
+                } else {
+                    // Placeholder
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFE0E0E0)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text("No movies", fontSize = 10.sp, color = Color.Gray)
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Phần 1: Title - Tăng chiều cao để đủ 2 dòng
+            // Title
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp) // Tăng từ 40dp lên 48dp để chắc chắn đủ 2 dòng
+                    .height(48.dp)
             ) {
                 Text(
                     text = album.title,
@@ -356,7 +384,7 @@ fun AlbumCard(
                 )
             }
 
-            // Phần 2: Author + Stats - chiều cao cố định
+            // Author + Stats
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -368,10 +396,19 @@ fun AlbumCard(
                         .size(18.dp)
                         .clip(CircleShape)
                         .background(Color.LightGray)
-                )
+                ) {
+                    ownerAvatar?.let { url ->
+                        AsyncImage(
+                            model = url,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = album.author,
+                    text = ownerName.ifEmpty { "..." },
                     style = MaterialTheme.typography.bodySmall.copy(color = Color.DarkGray),
                     maxLines = 1,
                     modifier = Modifier.weight(1f)
@@ -384,7 +421,7 @@ fun AlbumCard(
                 )
                 Spacer(modifier = Modifier.width(2.dp))
                 Text(
-                    text = album.likeCount.toString(),
+                    text = likeCount.toString(),
                     fontSize = 10.sp,
                     color = Color.Gray
                 )
@@ -397,7 +434,7 @@ fun AlbumCard(
                 )
                 Spacer(modifier = Modifier.width(2.dp))
                 Text(
-                    text = album.commentCount.toString(),
+                    text = commentCount.toString(),
                     fontSize = 10.sp,
                     color = Color.Gray
                 )
@@ -406,12 +443,25 @@ fun AlbumCard(
     }
 }
 
+// Review card using database ReviewWithMovie
 @Composable
-fun ReviewCard(
-    review: FakeReview,
+fun ReviewCardDb(
+    reviewWithMovie: ReviewWithMovie,
+    homeViewModel: HomeViewModel,
     onClick: () -> Unit,
     onProfileClick: () -> Unit
 ) {
+    val review = reviewWithMovie.review
+    val movie = reviewWithMovie.movie
+    val coroutineScope = rememberCoroutineScope()
+    var authorAvatar by remember { mutableStateOf<String?>(null) }
+    
+    LaunchedEffect(review.authorId) {
+        coroutineScope.launch {
+            authorAvatar = homeViewModel.getUserAvatar(review.authorId)
+        }
+    }
+    
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -437,15 +487,26 @@ fun ReviewCard(
                             .size(40.dp)
                             .clip(CircleShape)
                             .background(Color.LightGray)
-                    )
+                    ) {
+                        authorAvatar?.let { url ->
+                            AsyncImage(
+                                model = url,
+                                contentDescription = null,
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                        }
+                    }
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Text(
-                            text = "${review.movieTitle} ${review.movieYear}",
+                            text = "${movie.title} (${movie.year ?: ""})",
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = Color.Black
-                            )
+                            ),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
@@ -453,7 +514,7 @@ fun ReviewCard(
                                 style = MaterialTheme.typography.bodySmall.copy(color = Color.Gray)
                             )
                             Text(
-                                text = review.authorName,
+                                text = review.authorId.removePrefix("user_"),
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     color = InnieGreen,
                                     fontWeight = FontWeight.SemiBold
@@ -461,13 +522,15 @@ fun ReviewCard(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             // Rating stars
-                            repeat(review.rating.toInt()) {
-                                Icon(
-                                    imageVector = Icons.Filled.Star,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(12.dp),
-                                    tint = InnieGreen
-                                )
+                            review.rating?.let { rating ->
+                                repeat(rating.toInt()) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Star,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(12.dp),
+                                        tint = InnieGreen
+                                    )
+                                }
                             }
                         }
                     }
@@ -476,7 +539,7 @@ fun ReviewCard(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
-                    text = review.reviewText,
+                    text = review.body,
                     style = MaterialTheme.typography.bodySmall.copy(color = Color.DarkGray),
                     maxLines = 4,
                     overflow = TextOverflow.Ellipsis
@@ -496,8 +559,8 @@ fun ReviewCard(
             Spacer(modifier = Modifier.width(12.dp))
 
             // Movie poster
-            Image(
-                painter = painterResource(id = review.posterRes),
+            AsyncImage(
+                model = movie.posterUrl,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier

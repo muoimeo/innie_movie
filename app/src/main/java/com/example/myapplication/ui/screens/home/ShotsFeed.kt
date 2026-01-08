@@ -80,6 +80,7 @@ import com.example.myapplication.data.shotLocalVideoMap
 import com.example.myapplication.ui.navigation.Screen
 import com.example.myapplication.ui.theme.InnieGreen
 import com.example.myapplication.ui.components.CommentBottomSheet
+import android.content.Intent
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -92,6 +93,7 @@ fun ShotsFeed(
     val isLoading by shotsViewModel.isLoading.collectAsState()
     val relatedMovies by shotsViewModel.relatedMovies.collectAsState()
     val isRefreshing by shotsViewModel.isRefreshing.collectAsState()
+    val context = LocalContext.current
     
     if (isLoading || shots.isEmpty()) {
         Box(
@@ -111,6 +113,9 @@ fun ShotsFeed(
     
     // Collect liked shots as state for reactivity
     val likedShotsSet by shotsViewModel.likedShots.collectAsState()
+    
+    // Real comment counts from database
+    val shotCommentCounts by shotsViewModel.shotCommentCounts.collectAsState()
     
     // Pull-to-refresh state
     val pullToRefreshState = rememberPullToRefreshState()
@@ -145,14 +150,26 @@ fun ShotsFeed(
                 // Comment state for this shot
                 var showComments by remember { mutableStateOf(false) }
                 
+                // Get real comment count from database
+                val realCommentCount = shotCommentCounts[shot.id] ?: shot.commentCount
+                
                 ShotItem(
                     shot = shot,
                     relatedMovie = relatedMovie,
                     isCurrentPage = pagerState.currentPage == page,
                     localVideoResId = localVideoResId,
                     isLiked = isLiked,
+                    realCommentCount = realCommentCount,
                     onLikeClick = { shotsViewModel.toggleLike(shot.id) },
                     onCommentClick = { showComments = true },
+                    onShareClick = {
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "text/plain"
+                            putExtra(Intent.EXTRA_SUBJECT, "Check out this shot!")
+                            putExtra(Intent.EXTRA_TEXT, "${shot.caption}\n\nShared from Innie Movie App")
+                        }
+                        context.startActivity(Intent.createChooser(shareIntent, "Share via"))
+                    },
                     onMovieClick = { movieId ->
                         navController?.navigate(Screen.MoviePage.createRoute(movieId))
                     }
@@ -179,8 +196,10 @@ fun ShotItem(
     isCurrentPage: Boolean,
     localVideoResId: Int? = null,
     isLiked: Boolean = false,
+    realCommentCount: Int = 0,  // Real comment count from database
     onLikeClick: () -> Unit = {},
     onCommentClick: () -> Unit = {},
+    onShareClick: () -> Unit = {},
     onMovieClick: (Int) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -345,14 +364,14 @@ fun ShotItem(
             
             ShotActionButton(
                 icon = Icons.Outlined.ChatBubbleOutline,
-                count = shot.commentCount,
+                count = realCommentCount, 
                 onClick = onCommentClick
             )
             
             ShotActionButton(
                 icon = Icons.Default.Share,
                 count = shot.shareCount,
-                onClick = { }
+                onClick = onShareClick
             )
         }
         

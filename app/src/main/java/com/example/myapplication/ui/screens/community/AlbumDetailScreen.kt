@@ -455,7 +455,7 @@ fun AlbumStatsRow(
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
-                text = "12k",
+                text = formatCount(commentCount),
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color(0xFF1A202C)
