@@ -29,4 +29,29 @@ interface UserDao {
 
     @Query("SELECT * FROM users WHERE userId = :id LIMIT 1")
     suspend fun getUserById(id: String): User?
+    
+    // Update user profile fields
+    @Query("""
+        UPDATE users SET 
+            displayName = :displayName,
+            username = :username,
+            email = :email,
+            avatarUrl = :avatarUrl,
+            coverUrl = :coverUrl,
+            bio = :bio,
+            gender = :gender,
+            dateOfBirth = :dateOfBirth
+        WHERE userId = :userId
+    """)
+    suspend fun updateUserProfile(
+        userId: String,
+        displayName: String?,
+        username: String,
+        email: String,
+        avatarUrl: String?,
+        coverUrl: String?,
+        bio: String?,
+        gender: String?,
+        dateOfBirth: Long?
+    )
 }

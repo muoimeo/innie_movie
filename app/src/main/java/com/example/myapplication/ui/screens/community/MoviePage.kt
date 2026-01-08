@@ -36,6 +36,7 @@ import com.example.myapplication.data.getCastCrewForMovie
 import com.example.myapplication.data.CastInfo
 import com.example.myapplication.data.CrewInfo
 import com.example.myapplication.ui.theme.InnieGreen
+import androidx.compose.ui.platform.LocalContext
 
 // Data classes for movie details
 data class MovieDetail(
@@ -515,15 +516,27 @@ fun MoviePage(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.width(60.dp)
                         ) {
-                            AsyncImage(
-                                model = cast.imageUrl,
-                                contentDescription = cast.name,
+                            Box(
                                 modifier = Modifier
                                     .size(50.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFFC4C4C4)),
-                                contentScale = ContentScale.Crop
-                            )
+                                    .background(Color(0xFF4A5568)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AsyncImage(
+                                    model = cast.imageUrl,
+                                    contentDescription = cast.name,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                                // Fallback text if image fails (shown behind)
+                                Text(
+                                    text = cast.name.first().uppercase(),
+                                    color = Color.White.copy(alpha = 0.3f),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp
+                                )
+                            }
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = cast.name.split(" ").first(),
@@ -542,15 +555,27 @@ fun MoviePage(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.width(60.dp)
                         ) {
-                            AsyncImage(
-                                model = crew.imageUrl,
-                                contentDescription = crew.name,
+                            Box(
                                 modifier = Modifier
                                     .size(50.dp)
                                     .clip(CircleShape)
-                                    .background(Color(0xFFC4C4C4)),
-                                contentScale = ContentScale.Crop
-                            )
+                                    .background(Color(0xFF4A5568)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AsyncImage(
+                                    model = crew.imageUrl,
+                                    contentDescription = crew.name,
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop
+                                )
+                                // Fallback text if image fails (shown behind)
+                                Text(
+                                    text = crew.name.first().uppercase(),
+                                    color = Color.White.copy(alpha = 0.3f),
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 18.sp
+                                )
+                            }
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = crew.name.split(" ").first(),
@@ -590,30 +615,50 @@ fun MoviePage(
                 )
             }
 
-            // Reviews list - using sampleMovie for fake reviews
-            Column(
-                modifier = Modifier
-                    .offset(y = (-12).dp)
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                sampleMovie.reviews.forEach { review ->
-                    ReviewCard(review = review)
+            // Reviews list - from database
+            val dbReviews by viewModel.reviews.collectAsState()
+            
+            if (dbReviews.isNotEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .offset(y = (-12).dp)
+                        .padding(horizontal = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    dbReviews.forEach { review ->
+                        DatabaseReviewCard(review = review)
+                    }
+                    
+                    // See All button centered at bottom
+                    if (dbReviews.size >= 5) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "See All",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = InnieGreen,
+                                modifier = Modifier.clickable { }
+                            )
+                        }
+                    }
                 }
-                
-                // See All button centered at bottom
+            } else {
+                // Empty state when no reviews
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 8.dp),
+                        .padding(vertical = 32.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "See All",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = InnieGreen,
-                        modifier = Modifier.clickable { }
+                        text = "No reviews yet",
+                        fontSize = 14.sp,
+                        color = Color.Gray
                     )
                 }
             }
@@ -751,6 +796,125 @@ fun ReviewCard(review: MovieReview) {
             Spacer(modifier = Modifier.height(10.dp))
             
             // Read more
+            Text(
+                text = "Read more",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF9C4A8B),
+                modifier = Modifier.clickable { }
+            )
+        }
+    }
+}
+
+// Database Review Card for reviews from DB
+@Composable
+fun DatabaseReviewCard(review: com.example.myapplication.data.local.entities.Review) {
+    val context = LocalContext.current
+    val db = com.example.myapplication.data.local.db.DatabaseProvider.getDatabase(context)
+    var authorName by remember { mutableStateOf("") }
+    var authorAvatar by remember { mutableStateOf<String?>(null) }
+    
+    LaunchedEffect(review.authorId) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val user = db.userDao().getUserById(review.authorId)
+            authorName = user?.displayName ?: user?.username ?: review.authorId.replaceFirstChar { it.uppercase() }
+            authorAvatar = user?.avatarUrl
+        }
+    }
+    
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Author avatar
+                if (authorAvatar != null) {
+                    AsyncImage(
+                        model = authorAvatar,
+                        contentDescription = authorName,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF4A5568)),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF4A5568)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = (authorName.firstOrNull() ?: review.authorId.first()).uppercase(),
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.width(10.dp))
+                
+                Column {
+                    Row {
+                        Text("Review by ", fontSize = 12.sp, color = Color(0xFF888888))
+                        Text(
+                            text = authorName.ifBlank { "User" },
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = InnieGreen
+                        )
+                    }
+                    
+                    review.rating?.let { rating ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            repeat(rating.toInt()) {
+                                Icon(
+                                    imageVector = Icons.Filled.Star,
+                                    contentDescription = null,
+                                    tint = Color(0xFFEC2626),
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                            if (rating % 1 >= 0.5f) {
+                                Icon(
+                                    imageVector = Icons.Filled.Star,
+                                    contentDescription = null,
+                                    tint = Color(0xFFEC2626).copy(alpha = 0.5f),
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("/5", fontSize = 11.sp, color = Color(0xFF888888))
+                        }
+                    }
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(12.dp))
+            
+            review.title?.let { title ->
+                Text(title, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1A202C))
+                Spacer(modifier = Modifier.height(6.dp))
+            }
+            
+            Text(
+                text = review.body,
+                fontSize = 13.sp,
+                color = Color(0xFF1A202C),
+                lineHeight = 20.sp,
+                maxLines = 4,
+                overflow = TextOverflow.Ellipsis
+            )
+            
+            Spacer(modifier = Modifier.height(10.dp))
+            
             Text(
                 text = "Read more",
                 fontSize = 12.sp,

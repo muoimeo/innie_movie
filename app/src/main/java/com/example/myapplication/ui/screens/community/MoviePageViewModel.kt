@@ -51,6 +51,10 @@ class MoviePageViewModel(application: Application) : AndroidViewModel(applicatio
     private val _watchlistCategories = MutableStateFlow<List<WatchlistCategory>>(emptyList())
     val watchlistCategories: StateFlow<List<WatchlistCategory>> = _watchlistCategories.asStateFlow()
     
+    // Reviews for this movie
+    private val _reviews = MutableStateFlow<List<com.example.myapplication.data.local.entities.Review>>(emptyList())
+    val reviews: StateFlow<List<com.example.myapplication.data.local.entities.Review>> = _reviews.asStateFlow()
+    
     // Snackbar events
     private val _snackbarEvent = MutableSharedFlow<String>()
     val snackbarEvent = _snackbarEvent.asSharedFlow()
@@ -88,6 +92,13 @@ class MoviePageViewModel(application: Application) : AndroidViewModel(applicatio
                 if (categories.isNotEmpty()) {
                     defaultCategoryId = categories.first().id
                 }
+            }
+        }
+        
+        // Load reviews for this movie (limit to 5 for Popular Reviews section)
+        viewModelScope.launch {
+            database.reviewDao().getReviewsForMovie(movieId, limit = 5).collect { reviewList ->
+                _reviews.value = reviewList
             }
         }
     }

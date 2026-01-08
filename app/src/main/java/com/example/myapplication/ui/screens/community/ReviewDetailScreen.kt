@@ -561,13 +561,57 @@ fun ReviewDetailScreen(
                             }
                         }
                     } else {
-                        // Display comments inline
-                        comments.forEach { comment ->
-                            ReviewCommentItem(
-                                comment = comment,
-                                db = db
-                            )
-                            Spacer(modifier = Modifier.height(12.dp))
+                        // State for showing all or limited comments
+                        var showAllComments by remember { mutableStateOf(false) }
+                        val displayedComments = if (showAllComments) comments else comments.take(5)
+                        
+                        // Display comments inline with improved spacing
+                        displayedComments.forEach { comment ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F8F8)),
+                                elevation = CardDefaults.cardElevation(0.dp)
+                            ) {
+                                ReviewCommentItem(
+                                    comment = comment,
+                                    db = db
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(10.dp))
+                        }
+                        
+                        // "See more comments" button if there are more than 5
+                        if (comments.size > 5 && !showAllComments) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "See more comments (${comments.size - 5} more)",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = InnieGreen,
+                                    modifier = Modifier.clickable { showAllComments = true }
+                                )
+                            }
+                        } else if (showAllComments && comments.size > 5) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "Show less",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.Gray,
+                                    modifier = Modifier.clickable { showAllComments = false }
+                                )
+                            }
                         }
                     }
                     
@@ -638,32 +682,48 @@ fun ReviewCommentItem(
     db: com.example.myapplication.data.local.db.AppDatabase
 ) {
     var authorName by remember { mutableStateOf("") }
+    var authorAvatar by remember { mutableStateOf<String?>(null) }
     
     LaunchedEffect(comment.userId) {
         kotlinx.coroutines.withContext(Dispatchers.IO) {
             val user = db.userDao().getUserById(comment.userId)
             authorName = user?.displayName ?: user?.username ?: comment.userId.replace("user_", "").replaceFirstChar { it.uppercase() }
+            authorAvatar = user?.avatarUrl
         }
     }
     
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(12.dp),
         verticalAlignment = Alignment.Top
     ) {
-        // Avatar
-        Box(
-            modifier = Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(Color(0xFF4A5568)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = comment.userId.take(1).uppercase(),
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 12.sp
+        // Avatar - load from URL or show initial
+        if (authorAvatar != null) {
+            coil.compose.AsyncImage(
+                model = authorAvatar,
+                contentDescription = authorName,
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF4A5568)),
+                contentScale = ContentScale.Crop
             )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF4A5568)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = (authorName.firstOrNull() ?: comment.userId.first()).uppercase(),
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+            }
         }
         
         Spacer(modifier = Modifier.width(10.dp))

@@ -24,10 +24,12 @@ data class MovieCastCrew(
     val crew: List<CrewInfo>
 )
 
-// Helper to generate avatar URL from name
+// Helper to generate avatar URL from name - uses ui-avatars with professional styling
+// This provides a fallback when TMDB profile images are not available
 private fun avatarUrl(name: String): String {
     val encoded = name.replace(" ", "+")
-    return "https://ui-avatars.com/api/?name=$encoded&background=random&size=200"
+    // Using UI Avatars with a dark gray background and white text, professional look
+    return "https://ui-avatars.com/api/?name=$encoded&background=4A5568&color=fff&size=200&bold=true&format=png"
 }
 
 // === CAST & CREW DATA BY MOVIE ===
@@ -37,10 +39,10 @@ val movieCastCrewMap: Map<Int, MovieCastCrew> = mapOf(
     1 to MovieCastCrew(
         movieId = 1,
         cast = listOf(
-            CastInfo("Robert Pattinson", "Bruce Wayne / Batman", "https://image.tmdb.org/t/p/w185/8A4PS5iG2yjF4Rfr6Q9LaPlKVER.jpg"),
-            CastInfo("Zoë Kravitz", "Selina Kyle / Catwoman", "https://image.tmdb.org/t/p/w185/sEOvL3zS72JuXPKqHEfSIxMGT5t.jpg"),
-            CastInfo("Paul Dano", "Edward Nashton / Riddler", "https://image.tmdb.org/t/p/w185/kXBC754STG1j56yqWGK2KQFOhq2.jpg"),
-            CastInfo("Jeffrey Wright", "Lt. James Gordon", "https://image.tmdb.org/t/p/w185/wBh9rwK3aRr1hCrSRLxxPHKzGeU.jpg"),
+            CastInfo("Robert Pattinson", "Bruce Wayne / Batman", "https://image.tmdb.org/t/p/original/8A4PS5iG7GWEAVFftyqMZKl3qcr.jpg"),
+            CastInfo("Zoë Kravitz", "Selina Kyle / Catwoman", "https://image.tmdb.org/t/p/original/zx74kkI931iiQATJybvRKWYnOe9.jpg"),
+            CastInfo("Paul Dano", "Edward Nashton / Riddler", "https://image.tmdb.org/t/p/original/zEJJsm0z07EPNl2Pi1h67xuCmcA.jpg"),
+            CastInfo("Jeffrey Wright", "Lt. James Gordon", "https://image.tmdb.org/t/p/original/yGcuHGW4glqRpOPxgiCvjcren7F.jpg"),
             CastInfo("Colin Farrell", "Oswald Cobblepot / Penguin", "https://image.tmdb.org/t/p/w185/vujYfMbWy1eMIOgbO4Fq6bmZz0M.jpg"),
             CastInfo("Andy Serkis", "Alfred Pennyworth", "https://image.tmdb.org/t/p/w185/2aKSLoJfvrCBlM5LciGLGbIDBBl.jpg"),
             CastInfo("John Turturro", "Carmine Falcone", "https://image.tmdb.org/t/p/w185/h9gpPw7gjy5WVoLbYFVQZyAatPF.jpg")

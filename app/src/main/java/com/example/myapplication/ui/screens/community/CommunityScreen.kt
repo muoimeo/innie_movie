@@ -250,6 +250,20 @@ fun CommunityReviewItemDb(
 ) {
     val currentUserId = UserSessionManager.getUserId()
     val isOwnReview = review.authorId == currentUserId
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val db = DatabaseProvider.getDatabase(context)
+    
+    // Load author name and avatar from database
+    var authorName by remember { mutableStateOf("") }
+    var authorAvatar by remember { mutableStateOf<String?>(null) }
+    
+    LaunchedEffect(review.authorId) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val user = db.userDao().getUserById(review.authorId)
+            authorName = user?.displayName ?: user?.username ?: review.authorId.replace("user_", "").replace("guest_", "")
+            authorAvatar = user?.avatarUrl
+        }
+    }
     
     Row(
         modifier = Modifier
@@ -265,20 +279,32 @@ fun CommunityReviewItemDb(
             ),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // CỘT 1: AVATAR - green border for own review
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(if (isOwnReview) InnieGreen else Color(0xFF4A5568)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = if (isOwnReview) "You" else review.authorId.take(1).uppercase(),
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = if (isOwnReview) 10.sp else 16.sp
+        // CỘT 1: AVATAR - load from database or show initial
+        if (authorAvatar != null && !isOwnReview) {
+            AsyncImage(
+                model = authorAvatar,
+                contentDescription = authorName,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF4A5568)),
+                contentScale = ContentScale.Crop
             )
+        } else {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(if (isOwnReview) InnieGreen else Color(0xFF4A5568)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = if (isOwnReview) "You" else (authorName.firstOrNull()?.uppercase() ?: review.authorId.take(1).uppercase()),
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = if (isOwnReview) 10.sp else 16.sp
+                )
+            }
         }
 
         // CỘT 2: NỘI DUNG VĂN BẢN
@@ -310,7 +336,7 @@ fun CommunityReviewItemDb(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("Review by ", fontSize = 11.sp, color = Color.Gray)
                         Text(
-                            text = review.authorId.replace("user_", "").replace("guest_", ""),
+                            text = authorName.ifBlank { review.authorId.replace("user_", "").replace("guest_", "") },
                             fontSize = 11.sp,
                             color = Color(0xFF00C02B),
                             fontWeight = FontWeight.Bold

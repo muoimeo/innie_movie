@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.outlined.Cake
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Person
@@ -26,26 +27,84 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
+import com.example.myapplication.data.local.db.DatabaseProvider
+import com.example.myapplication.data.local.entities.User
+import com.example.myapplication.data.session.UserSessionManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.*
 
 private val InnieGreen = Color(0xFF00C02B)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountScreen(navController: NavController) {
-    // Profile state
-    var displayName by remember { mutableStateOf("Kyran Mitchell") }
-    var username by remember { mutableStateOf("@kyran_mitchell") }
-    var email by remember { mutableStateOf("kyran@gmail.com") }
-    var dateOfBirth by remember { mutableStateOf("15/03/1995") }
-    var gender by remember { mutableStateOf("Male") }
+    val context = LocalContext.current
+    val db = DatabaseProvider.getDatabase(context)
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
+    
+    // Get current user from session
+    val userId = UserSessionManager.getUserId()
+    var user by remember { mutableStateOf<User?>(null) }
+    var isLoading by remember { mutableStateOf(true) }
+    
+    // Profile state - loaded from database
+    var displayName by remember { mutableStateOf("") }
+    var username by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var dateOfBirth by remember { mutableStateOf<Long?>(null) }
+    var gender by remember { mutableStateOf("prefer_not_to_say") }
     var avatarUrl by remember { mutableStateOf<String?>(null) }
     var coverUrl by remember { mutableStateOf<String?>(null) }
+    var bio by remember { mutableStateOf("") }
+    
+    // Load user from database
+    LaunchedEffect(userId) {
+        withContext(Dispatchers.IO) {
+            user = db.userDao().getUserById(userId)
+            user?.let { u ->
+                displayName = u.displayName ?: ""
+                username = u.username
+                email = u.email
+                dateOfBirth = u.dateOfBirth
+                gender = u.gender ?: "prefer_not_to_say"
+                avatarUrl = u.avatarUrl
+                coverUrl = u.coverUrl
+                bio = u.bio ?: ""
+            }
+            isLoading = false
+        }
+    }
+    
+    // Helper function to save changes to database
+    fun saveToDatabase() {
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                db.userDao().updateUserProfile(
+                    userId = userId,
+                    displayName = displayName.ifBlank { null },
+                    username = username,
+                    email = email,
+                    avatarUrl = avatarUrl,
+                    coverUrl = coverUrl,
+                    bio = bio.ifBlank { null },
+                    gender = gender,
+                    dateOfBirth = dateOfBirth
+                )
+            }
+            snackbarHostState.showSnackbar("Profile updated!")
+        }
+    }
     
     // Edit dialog states
     var showEditDialog by remember { mutableStateOf(false) }
@@ -55,6 +114,14 @@ fun AccountScreen(navController: NavController) {
     
     // Gender selection dialog
     var showGenderDialog by remember { mutableStateOf(false) }
+    
+    // Avatar URL dialog
+    var showAvatarUrlDialog by remember { mutableStateOf(false) }
+    var avatarUrlInput by remember { mutableStateOf("") }
+    
+    // Cover URL dialog
+    var showCoverUrlDialog by remember { mutableStateOf(false) }
+    var coverUrlInput by remember { mutableStateOf("") }
     
     // Edit Dialog
     if (showEditDialog) {
@@ -67,9 +134,18 @@ fun AccountScreen(navController: NavController) {
                 when (editField) {
                     "name" -> displayName = editValue
                     "email" -> email = editValue
-                    "dob" -> dateOfBirth = editValue
+                    "username" -> username = editValue
+                    "bio" -> bio = editValue
+                    "dob" -> {
+                        // Parse date string to timestamp
+                        try {
+                            val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                            dateOfBirth = sdf.parse(editValue)?.time
+                        } catch (e: Exception) { }
+                    }
                 }
                 showEditDialog = false
+                saveToDatabase()
             }
         )
     }
@@ -81,12 +157,44 @@ fun AccountScreen(navController: NavController) {
             onSelect = { 
                 gender = it 
                 showGenderDialog = false
+                saveToDatabase()
             },
             onDismiss = { showGenderDialog = false }
         )
     }
     
+    // Avatar URL Dialog
+    if (showAvatarUrlDialog) {
+        EditFieldDialog(
+            label = "Avatar URL",
+            value = avatarUrlInput,
+            onValueChange = { avatarUrlInput = it },
+            onDismiss = { showAvatarUrlDialog = false },
+            onConfirm = {
+                avatarUrl = avatarUrlInput.ifBlank { null }
+                showAvatarUrlDialog = false
+                saveToDatabase()
+            }
+        )
+    }
+    
+    // Cover URL Dialog
+    if (showCoverUrlDialog) {
+        EditFieldDialog(
+            label = "Cover Image URL",
+            value = coverUrlInput,
+            onValueChange = { coverUrlInput = it },
+            onDismiss = { showCoverUrlDialog = false },
+            onConfirm = {
+                coverUrl = coverUrlInput.ifBlank { null }
+                showCoverUrlDialog = false
+                saveToDatabase()
+            }
+        )
+    }
+    
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             CenterAlignedTopAppBar(
                 title = {
@@ -144,7 +252,10 @@ fun AccountScreen(navController: NavController) {
                             .size(36.dp)
                             .clip(CircleShape)
                             .background(Color.Black.copy(alpha = 0.5f))
-                            .clickable { /* TODO: Open image picker for cover */ },
+                            .clickable { 
+                                coverUrlInput = coverUrl ?: ""
+                                showCoverUrlDialog = true
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -194,7 +305,10 @@ fun AccountScreen(navController: NavController) {
                             .size(32.dp)
                             .clip(CircleShape)
                             .background(InnieGreen)
-                            .clickable { /* TODO: Open image picker for avatar */ },
+                            .clickable { 
+                                avatarUrlInput = avatarUrl ?: ""
+                                showAvatarUrlDialog = true
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -215,13 +329,13 @@ fun AccountScreen(navController: NavController) {
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = displayName,
+                    text = displayName.ifBlank { username },
                     fontSize = 22.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.Black
                 )
                 Text(
-                    text = username,
+                    text = "@$username",
                     fontSize = 14.sp,
                     color = Color.Gray
                 )
@@ -276,14 +390,72 @@ fun AccountScreen(navController: NavController) {
                     
                     AccountDivider()
                     
+                    // Format date for display
+                    val dobDisplay = dateOfBirth?.let { 
+                        SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).format(Date(it)) 
+                    } ?: "Not set"
+                    
                     AccountInfoRow(
                         icon = Icons.Outlined.Cake,
                         label = "Date of Birth",
-                        value = dateOfBirth,
+                        value = dobDisplay,
                         onEditClick = {
                             editField = "dob"
-                            editLabel = "Date of Birth"
-                            editValue = dateOfBirth
+                            editLabel = "Date of Birth (dd/MM/yyyy)"
+                            editValue = dobDisplay
+                            showEditDialog = true
+                        }
+                    )
+                    
+                    AccountDivider()
+                    
+                    // Format gender for display
+                    val genderDisplay = when(gender) {
+                        "male" -> "Male"
+                        "female" -> "Female"
+                        "other" -> "Other"
+                        else -> "Prefer not to say"
+                    }
+                    
+                    AccountInfoRow(
+                        icon = Icons.Outlined.Wc,
+                        label = "Gender",
+                        value = genderDisplay,
+                        onEditClick = { showGenderDialog = true }
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Additional Profile Info Card - Bio and Username
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color.White),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            ) {
+                Column {
+                    Text(
+                        text = "Additional Info",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(start = 20.dp, top = 16.dp, bottom = 8.dp)
+                    )
+                    
+                    AccountInfoRow(
+                        icon = Icons.Outlined.Person,
+                        label = "Username",
+                        value = "@$username",
+                        onEditClick = {
+                            editField = "username"
+                            editLabel = "Username"
+                            editValue = username
                             showEditDialog = true
                         }
                     )
@@ -291,13 +463,70 @@ fun AccountScreen(navController: NavController) {
                     AccountDivider()
                     
                     AccountInfoRow(
-                        icon = Icons.Outlined.Wc,
-                        label = "Gender",
-                        value = gender,
-                        onEditClick = { showGenderDialog = true }
+                        icon = Icons.Default.Info,
+                        label = "Bio",
+                        value = bio.ifBlank { "Tell us about yourself..." },
+                        onEditClick = {
+                            editField = "bio"
+                            editLabel = "Bio"
+                            editValue = bio
+                            showEditDialog = true
+                        }
                     )
                     
                     Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(16.dp))
+            
+            // Account Info Card (Read-only)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5)),
+                shape = RoundedCornerShape(16.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp)
+                ) {
+                    Text(
+                        text = "Account Info",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Gray
+                    )
+                    
+                    Spacer(modifier = Modifier.height(12.dp))
+                    
+                    user?.let { u ->
+                        val joinDate = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
+                            .format(Date(u.joinDateMillis))
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("Member since", fontSize = 13.sp, color = Color.Gray)
+                            Text(joinDate, fontSize = 13.sp, color = Color(0xFF1A202C))
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text("User ID", fontSize = 13.sp, color = Color.Gray)
+                            Text(
+                                u.userId.take(12) + if (u.userId.length > 12) "..." else "",
+                                fontSize = 13.sp,
+                                color = Color(0xFF1A202C)
+                            )
+                        }
+                    }
                 }
             }
             
@@ -435,7 +664,13 @@ private fun GenderSelectionDialog(
     onSelect: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val genderOptions = listOf("Male", "Female", "Other", "Prefer not to say")
+    // Map of database value to display label
+    val genderOptions = listOf(
+        "male" to "Male",
+        "female" to "Female",
+        "other" to "Other",
+        "prefer_not_to_say" to "Prefer not to say"
+    )
     
     Dialog(onDismissRequest = onDismiss) {
         Card(
@@ -455,24 +690,24 @@ private fun GenderSelectionDialog(
                 
                 Spacer(modifier = Modifier.height(16.dp))
                 
-                genderOptions.forEach { option ->
+                genderOptions.forEach { (value, label) ->
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { onSelect(option) }
+                            .clickable { onSelect(value) }
                             .padding(vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         RadioButton(
-                            selected = currentGender == option,
-                            onClick = { onSelect(option) },
+                            selected = currentGender == value,
+                            onClick = { onSelect(value) },
                             colors = RadioButtonDefaults.colors(
                                 selectedColor = InnieGreen
                             )
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            text = option,
+                            text = label,
                             fontSize = 16.sp,
                             color = Color.Black
                         )

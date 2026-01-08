@@ -56,7 +56,7 @@ import com.example.myapplication.data.local.entities.WatchlistItem
         Follow::class,
         Friendship::class
     ],
-    version = 28,  // Reduced synthetic stats for better diversity, fixed Profile crash
+    version = 29,  // Reduced synthetic stats for better diversity, fixed Profile crash
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
