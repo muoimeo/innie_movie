@@ -80,6 +80,7 @@ import com.example.myapplication.data.shotLocalVideoMap
 import com.example.myapplication.ui.navigation.Screen
 import com.example.myapplication.ui.theme.InnieGreen
 import com.example.myapplication.ui.components.CommentBottomSheet
+import com.example.myapplication.ui.components.ShareBottomSheet
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -145,6 +146,9 @@ fun ShotsFeed(
                 // Comment state for this shot
                 var showComments by remember { mutableStateOf(false) }
                 
+                // Share state for this shot
+                var showShare by remember { mutableStateOf(false) }
+                
                 ShotItem(
                     shot = shot,
                     relatedMovie = relatedMovie,
@@ -153,6 +157,7 @@ fun ShotsFeed(
                     isLiked = isLiked,
                     onLikeClick = { shotsViewModel.toggleLike(shot.id) },
                     onCommentClick = { showComments = true },
+                    onShareClick = { showShare = true },
                     onMovieClick = { movieId ->
                         navController?.navigate(Screen.MoviePage.createRoute(movieId))
                     }
@@ -164,6 +169,16 @@ fun ShotsFeed(
                         targetType = "shot",
                         targetId = shot.id,
                         onDismiss = { showComments = false }
+                    )
+                }
+                
+                // Share Bottom Sheet for this shot
+                if (showShare) {
+                    ShareBottomSheet(
+                        contentType = "shot",
+                        contentId = shot.id,
+                        contentTitle = shot.caption,
+                        onDismiss = { showShare = false }
                     )
                 }
             }
@@ -181,6 +196,7 @@ fun ShotItem(
     isLiked: Boolean = false,
     onLikeClick: () -> Unit = {},
     onCommentClick: () -> Unit = {},
+    onShareClick: () -> Unit = {},
     onMovieClick: (Int) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -352,7 +368,7 @@ fun ShotItem(
             ShotActionButton(
                 icon = Icons.Default.Share,
                 count = shot.shareCount,
-                onClick = { }
+                onClick = onShareClick
             )
         }
         

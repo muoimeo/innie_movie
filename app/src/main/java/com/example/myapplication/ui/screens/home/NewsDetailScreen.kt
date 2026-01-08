@@ -70,6 +70,7 @@ import com.example.myapplication.data.repository.LikeRepository
 import com.example.myapplication.data.repository.UserActivityRepository
 import com.example.myapplication.data.session.UserSessionManager
 import com.example.myapplication.ui.components.CommentBottomSheet
+import com.example.myapplication.ui.components.ShareBottomSheet
 
 /**
  * NewsDetailScreen - BBC/Variety-style professional article layout.
@@ -91,6 +92,9 @@ fun NewsDetailScreen(
     
     // Comment bottom sheet state
     var showComments by remember { mutableStateOf(false) }
+    
+    // Share bottom sheet state
+    var showShare by remember { mutableStateOf(false) }
     
     // Database repositories
     val db = remember { DatabaseProvider.getDatabase(context) }
@@ -425,7 +429,7 @@ fun NewsDetailScreen(
                 label = "Share",
                 isActive = false,
                 activeColor = InnieGreen,
-                onClick = { /* TODO: Share functionality */ }
+                onClick = { showShare = true }
             )
         }
     }
@@ -437,6 +441,16 @@ fun NewsDetailScreen(
             targetType = "news",
             targetId = newsId,
             onDismiss = { showComments = false }
+        )
+    }
+    
+    // Share Bottom Sheet
+    if (showShare && news != null) {
+        ShareBottomSheet(
+            contentType = "news",
+            contentId = newsId,
+            contentTitle = news!!.title,
+            onDismiss = { showShare = false }
         )
     }
 }
