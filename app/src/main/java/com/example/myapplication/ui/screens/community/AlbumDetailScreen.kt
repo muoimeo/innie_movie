@@ -37,6 +37,7 @@ import com.example.myapplication.data.local.entities.Movie
 import com.example.myapplication.ui.navigation.Screen
 import com.example.myapplication.ui.screens.home.AlbumViewModel
 import com.example.myapplication.ui.theme.InnieGreen
+import com.example.myapplication.ui.components.CommentBottomSheet
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -63,6 +64,9 @@ fun AlbumDetailScreen(
     // Snackbar state
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    
+    // Comment bottom sheet state
+    var showComments by remember { mutableStateOf(false) }
     
     // Load album data when screen opens
     LaunchedEffect(albumId) {
@@ -142,7 +146,8 @@ fun AlbumDetailScreen(
                                         duration = SnackbarDuration.Short
                                     )
                                 }
-                            }
+                            },
+                            onCommentClick = { showComments = true }
                         )
                     }
                     
@@ -202,6 +207,15 @@ fun AlbumDetailScreen(
         }
     }
     } // Close Scaffold
+    
+    // Comment Bottom Sheet
+    if (showComments) {
+        CommentBottomSheet(
+            targetType = "album",
+            targetId = albumId,
+            onDismiss = { showComments = false }
+        )
+    }
 }
 
 // Fix: White top bar WITHOUT statusBarsPadding to be truly fixed
@@ -386,7 +400,8 @@ fun AlbumStatsRow(
     likeCount: Int = 0,
     commentCount: Int = 0,
     isLiked: Boolean = false,
-    onLikeClick: () -> Unit = {}
+    onLikeClick: () -> Unit = {},
+    onCommentClick: () -> Unit = {}
 ) {
     // Format counts for display
     fun formatCount(count: Int): String {
@@ -427,11 +442,25 @@ fun AlbumStatsRow(
                 color = Color(0xFF1A202C)
             )
         }
-        StatItem(
-            icon = Icons.Outlined.ChatBubbleOutline,
-            count = formatCount(commentCount),
-            tint = Color(0xFF1A202C)
-        )
+        // Comment icon - clickable
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.clickable { onCommentClick() }
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.ChatBubbleOutline,
+                contentDescription = null,
+                tint = Color(0xFF1A202C),
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "12k",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF1A202C)
+            )
+        }
     }
 }
 

@@ -79,6 +79,7 @@ import com.example.myapplication.data.local.entities.Shot
 import com.example.myapplication.data.shotLocalVideoMap
 import com.example.myapplication.ui.navigation.Screen
 import com.example.myapplication.ui.theme.InnieGreen
+import com.example.myapplication.ui.components.CommentBottomSheet
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -141,6 +142,9 @@ fun ShotsFeed(
                 // Use collected state for reactivity
                 val isLiked = likedShotsSet.contains(shot.id)
                 
+                // Comment state for this shot
+                var showComments by remember { mutableStateOf(false) }
+                
                 ShotItem(
                     shot = shot,
                     relatedMovie = relatedMovie,
@@ -148,10 +152,20 @@ fun ShotsFeed(
                     localVideoResId = localVideoResId,
                     isLiked = isLiked,
                     onLikeClick = { shotsViewModel.toggleLike(shot.id) },
+                    onCommentClick = { showComments = true },
                     onMovieClick = { movieId ->
                         navController?.navigate(Screen.MoviePage.createRoute(movieId))
                     }
                 )
+                
+                // Comment Bottom Sheet for this shot
+                if (showComments) {
+                    CommentBottomSheet(
+                        targetType = "shot",
+                        targetId = shot.id,
+                        onDismiss = { showComments = false }
+                    )
+                }
             }
         }
     }
@@ -166,6 +180,7 @@ fun ShotItem(
     localVideoResId: Int? = null,
     isLiked: Boolean = false,
     onLikeClick: () -> Unit = {},
+    onCommentClick: () -> Unit = {},
     onMovieClick: (Int) -> Unit = {}
 ) {
     val context = LocalContext.current
@@ -331,7 +346,7 @@ fun ShotItem(
             ShotActionButton(
                 icon = Icons.Outlined.ChatBubbleOutline,
                 count = shot.commentCount,
-                onClick = { }
+                onClick = onCommentClick
             )
             
             ShotActionButton(
