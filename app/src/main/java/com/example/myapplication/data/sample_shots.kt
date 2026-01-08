@@ -75,7 +75,13 @@ val sampleShots = listOf(
     )
 )
 
-// Map shot ID to local video resource (only Shot 1 has local video)
+// Map shot ID to local video resource
 val shotLocalVideoMap = mapOf(
-    1 to R.raw.stranger_things
+    1 to R.raw.stranger_things,
+    2 to R.raw.dune_bts,
+    3 to R.raw.oppenheimer_bts,
+    4 to R.raw.interstellar_wormhold
 )
+
+
+

@@ -471,13 +471,20 @@ fun VideoProgressBar(
     progress: Float,
     modifier: Modifier = Modifier
 ) {
+    // Animate progress for smoother transitions
+    val animatedProgress by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = progress.coerceIn(0f, 1f),
+        animationSpec = androidx.compose.animation.core.tween(durationMillis = 100),
+        label = "progressAnimation"
+    )
+    
     androidx.compose.foundation.layout.BoxWithConstraints(
         modifier = modifier
             .height(4.dp)
             .clip(RoundedCornerShape(2.dp))
             .background(Color.White.copy(alpha = 0.3f))
     ) {
-        val progressWidth = maxWidth * progress.coerceIn(0f, 1f)
+        val progressWidth = maxWidth * animatedProgress
         
         // Progress fill (green line)
         Box(
@@ -488,7 +495,7 @@ fun VideoProgressBar(
         )
         
         // Progress dot at end of green line
-        if (progress > 0.01f) {
+        if (animatedProgress > 0.01f) {
             Box(
                 modifier = Modifier
                     .offset(x = progressWidth - 5.dp) // Center the 10dp dot on end of line
