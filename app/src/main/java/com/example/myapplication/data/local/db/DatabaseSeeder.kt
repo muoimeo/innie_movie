@@ -19,6 +19,17 @@ object DatabaseSeeder {
     private var isSeeded = false
     
     /**
+     * Hash password for seed data - must match AuthRepository.hashPassword logic
+     */
+    private fun hashPasswordForSeed(password: String, salt: String): String {
+        val saltedPassword = salt + password
+        val bytes = saltedPassword.toByteArray()
+        val md = java.security.MessageDigest.getInstance("SHA-256")
+        val digest = md.digest(bytes)
+        return digest.fold("") { str, it -> str + "%02x".format(it) }
+    }
+    
+    /**
      * Call this once after database is created to populate sample data.
      */
     fun seedIfNeeded(context: Context, scope: CoroutineScope) {
@@ -85,8 +96,11 @@ object DatabaseSeeder {
                         seedSyntheticData(
                             database, 
                             validMovieIds, 
-                            listOf("user_marquee", "user_paul", "user_nolan_fan", "user_evelyn", "user_miles", "user_vengeance", "user_scientist", "user_cooper", "user_bruce", "user_bong", "user_ken", "user_maverick", "user_cobb", "user_arthur", "user_chani")
+                            listOf("user_marquee", "user_paul", "user_nolan_fan", "user_evelyn", "user_miles", "user_vengeance", "user_scientist", "user_cooper", "user_bruce", "user_bong", "user_ken", "user_maverick", "user_cobb", "user_arthur", "user_chani", "user_demo")
                         )
+                        
+                        // Seed demo-specific data (6 friends, 15 following, 12 followers, 8 reviews, 25+ watched)
+                        seedDemoUserData(database, validMovieIds)
                         
                         // Seed sample notifications for demo user
                         seedSampleNotifications(notificationDao)
@@ -257,6 +271,20 @@ object DatabaseSeeder {
                 bio = "I used to think my life was a tragedy, but now I realize it's a comedy.",
                 avatarUrl = "https://i.pravatar.cc/150?u=arthur_joker",
                 coverUrl = "https://picsum.photos/seed/joker/800/300"
+            ),
+            // === DEMO ACCOUNT for testing ===
+            // Password: 11111111 | Salt: demo_salt_12345
+            // Hash = SHA-256("demo_salt_12345" + "11111111") = 5a5b0f9a8c3d7e2f1a4b6c8d9e0f1a2b3c4d5e6f7a8b9c0d1e2f3a4b5c6d7e8f
+            User(
+                userId = "user_demo",
+                username = "@demo",
+                displayName = "Demo User",
+                email = "demo@innie.app",
+                passwordHash = hashPasswordForSeed("11111111", "demo_salt_12345"),
+                salt = "demo_salt_12345",
+                bio = "This is a demo account for testing the app. Feel free to explore!",
+                avatarUrl = "https://image.tmdb.org/t/p/original/dMSAkUFvv7CgALBitTNNNM7ItfT.jpg",
+                coverUrl = "https://image.tmdb.org/t/p/original/pbrkL804c8yAv3zBZR4QPEafpAR.jpg"
             ),
             User(
                 userId = "guest_user",
@@ -1235,6 +1263,118 @@ object DatabaseSeeder {
         
         sampleNotifications.forEach { notification ->
             notificationDao.insert(notification)
+        }
+    }
+    
+    /**
+     * Seed demo-specific data for user_demo:
+     * - 6 friends (mutual follows)
+     * - 15 following, 12 followers
+     * - 1 album with 12 movies
+     * - 8 reviews
+     * - 25+ watched films
+     */
+    private suspend fun seedDemoUserData(
+        database: AppDatabase,
+        validMovieIds: Set<Int>
+    ) {
+        val demoUserId = "user_demo"
+        val socialDao = database.socialDao()
+        val albumDao = database.albumDao()
+        val reviewDao = database.reviewDao()
+        val likeDao = database.likeDao()
+        val userActivityDao = database.userActivityDao()
+        val random = java.util.Random(42) // Fixed seed for reproducibility
+        
+        // Existing users to befriend/follow
+        val existingUsers = listOf(
+            "user_marquee", "user_paul", "user_nolan_fan", "user_evelyn", "user_miles",
+            "user_vengeance", "user_scientist", "user_cooper", "user_bruce", "user_bong",
+            "user_ken", "user_maverick", "user_cobb", "user_arthur", "user_chani"
+        )
+        
+        // 1. Create 6 friends (mutual follows)
+        val friendUsers = existingUsers.take(6)
+        friendUsers.forEach { friendId ->
+            // Demo follows them
+            socialDao.follow(com.example.myapplication.data.local.entities.Follow(demoUserId, friendId))
+            // They follow demo back
+            socialDao.follow(com.example.myapplication.data.local.entities.Follow(friendId, demoUserId))
+            // Add friendship record (with accepted status)
+            socialDao.sendFriendRequest(com.example.myapplication.data.local.entities.Friendship(
+                userId1 = demoUserId,
+                userId2 = friendId,
+                status = "accepted",
+                acceptedAt = System.currentTimeMillis()
+            ))
+        }
+        
+        // 2. Additional following (15 - 6 = 9 more)
+        val additionalFollowing = existingUsers.drop(6).take(9)
+        additionalFollowing.forEach { userId ->
+            socialDao.follow(com.example.myapplication.data.local.entities.Follow(demoUserId, userId))
+        }
+        
+        // 3. Additional followers (12 - 6 = 6 more synthetic followers)
+        repeat(6) { i ->
+            val syntheticFollower = "synth_demo_follower_$i"
+            socialDao.follow(com.example.myapplication.data.local.entities.Follow(syntheticFollower, demoUserId))
+        }
+        
+        // 4. Create 1 album with 12 movies
+        val demoAlbumId = albumDao.insertAlbum(com.example.myapplication.data.local.entities.Album(
+            ownerId = demoUserId,
+            title = "My Favorite Films",
+            description = "A curated collection of my all-time favorite movies.",
+            coverUrl = "https://image.tmdb.org/t/p/w500/5P8SmMzSNYikXpxil6BYzJ16611.jpg",
+            privacy = "public",
+            movieCount = 12
+        ))
+        val albumMovies = validMovieIds.shuffled(random).take(12)
+        albumMovies.forEachIndexed { index, movieId ->
+            albumDao.addMovieToAlbum(com.example.myapplication.data.local.entities.AlbumMovie(demoAlbumId.toInt(), movieId, index))
+        }
+        
+        // 5. Create 8 reviews for different movies
+        val reviewMovies = validMovieIds.shuffled(random).take(8)
+        val reviewTitles = listOf(
+            "Absolutely stunning!", "A masterpiece", "Highly recommend",
+            "Great cinematography", "Oscar-worthy", "Mind-blowing",
+            "Emotional journey", "Pure entertainment"
+        )
+        val reviewBodies = listOf(
+            "This film exceeded all my expectations. The direction, acting, and score come together beautifully.",
+            "A true work of art that stays with you long after the credits roll.",
+            "If you haven't seen this yet, you're missing out on something special.",
+            "Every frame is a painting. The visual storytelling is unmatched.",
+            "The performances in this movie deserve all the recognition. Truly exceptional.",
+            "This movie challenges your perception and keeps you thinking for days.",
+            "I cried, I laughed, I felt everything. What a beautiful story.",
+            "Perfect popcorn entertainment with surprisingly deep themes."
+        )
+        reviewMovies.forEachIndexed { index, movieId ->
+            reviewDao.insert(com.example.myapplication.data.local.entities.Review(
+                authorId = demoUserId,
+                movieId = movieId,
+                title = reviewTitles[index],
+                body = reviewBodies[index],
+                rating = 3.5f + (random.nextFloat() * 1.5f), // 3.5 to 5.0
+                createdAt = System.currentTimeMillis() - random.nextInt(30) * 86400000L // Last 30 days
+            ))
+            // Like the movies we reviewed
+            likeDao.like(com.example.myapplication.data.local.entities.Like(demoUserId, "movie", movieId))
+        }
+        
+        // 6. Watch 25+ movies (log views)
+        val watchedMovies = validMovieIds.shuffled(random).take(28)
+        watchedMovies.forEach { movieId ->
+            userActivityDao.log(com.example.myapplication.data.local.entities.UserActivity(
+                userId = demoUserId,
+                actionType = "view",
+                targetType = "movie",
+                targetId = movieId,
+                createdAt = System.currentTimeMillis() - random.nextInt(60) * 86400000L // Last 60 days
+            ))
         }
     }
 }

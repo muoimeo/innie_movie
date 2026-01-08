@@ -55,7 +55,7 @@ class AuthViewModelFactory(
 class MainActivity : ComponentActivity() {
 
     // === DEV FLAG: Set to true to skip login and go directly to Home ===
-    private val SKIP_AUTH_FOR_DEV = true // Change to false to require login
+    private val SKIP_AUTH_FOR_DEV = false // Change to false to require login
     // ===================================================================
 
     private val authViewModel: AuthViewModel by viewModels {

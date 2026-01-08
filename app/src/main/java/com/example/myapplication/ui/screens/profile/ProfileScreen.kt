@@ -30,6 +30,7 @@ import kotlinx.coroutines.launch
 import com.example.myapplication.ui.navigation.Profile
 import com.example.myapplication.ui.navigation.Screen
 import com.example.myapplication.data.local.db.DatabaseProvider
+import com.example.myapplication.data.local.entities.ReviewWithMovie
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ModalNavigationDrawer
@@ -73,6 +74,11 @@ fun ProfileScreen(
     val followersCount by profileViewModel.followersCount.collectAsState()
     val friendsCount by profileViewModel.friendsCount.collectAsState()
     val followingCount by profileViewModel.followingCount.collectAsState()
+    val recentReviews by profileViewModel.recentReviews.collectAsState()
+    val showcaseMovies by profileViewModel.showcaseMovies.collectAsState()
+    
+    // Coroutine scope for showcase operations
+    val showcaseScope = rememberCoroutineScope()
     
     // Use ViewModel values directly (already loaded for correct user)
     val profileDisplayName = displayName
@@ -102,7 +108,9 @@ fun ProfileScreen(
                         ProfileHeaderSectionReal(
                             displayName = profileDisplayName,
                             username = profileUsername,
-                            onMenuClick = { scope.launch { drawerState.open() } }
+                            onMenuClick = { scope.launch { drawerState.open() } },
+                            avatarUrl = avatarUrl,
+                            coverUrl = coverUrl
                         )
                     } else {
                         // Header for other user's profile with back button
@@ -141,14 +149,21 @@ fun ProfileScreen(
                         reviewCount = reviewCount
                     )
 
-                    // 4. Favorite Films - Exactly 3 Slots (like profile customization)
+                    // 4. Favorite Films - Exactly 3 Slots (showcase, separate from likes)
                     FavoriteFilmSlots(
                         title = "$profileDisplayName's Favorite Films",
-                        movies = likedMovies.take(3),
+                        movies = showcaseMovies,
                         navController = navController,
                         isOwnProfile = isOwnProfile,
                         onNavigateToSearch = onNavigateToSearch,
-                        onRemoveFavorite = onRemoveFavorite
+                        onRemoveFavorite = { movieId ->
+                            // Remove from showcase only (doesn't unlike)
+                            showcaseScope.launch {
+                                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                                    profileViewModel.removeFromShowcase(movieId)
+                                }
+                            }
+                        }
                     )
 
                     // 5. Recent Watched from Database (max 4 movies + 'more' item)
@@ -158,7 +173,8 @@ fun ProfileScreen(
                             movies = recentWatchedMovies,
                             showSeeAll = isOwnProfile,
                             onSeeAllClick = { navController.navigate(Profile.WatchHistory.route) },
-                            maxItems = 4
+                            maxItems = 4,
+                            isOwnProfile = isOwnProfile
                         )
                     } else if (isOwnProfile) {
                         // Fallback to template when no watched movies
@@ -171,9 +187,15 @@ fun ProfileScreen(
                         )
                     }
 
-                    // 6. Recent Reviewed (only for own profile)
-                    if (isOwnProfile) {
-                        RecentReviewedSection(user, onSeeAllClick = { navController.navigate(Profile.Reviews.route) })
+                    // 6. Recent Reviewed (for all profiles, shows user's reviews)
+                    if (recentReviews.isNotEmpty()) {
+                        RecentReviewedSectionDb(
+                            reviews = recentReviews,
+                            displayName = displayName,
+                            showSeeAll = isOwnProfile,
+                            onSeeAllClick = { navController.navigate(Profile.Reviews.route) },
+                            onReviewClick = { reviewId -> navController.navigate(Screen.ReviewDetail.createRoute(reviewId)) }
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(120.dp))
@@ -264,26 +286,39 @@ fun SocialStatsSection(user: UserProfile) {
 }
 
 /**
- * Profile header using ViewModel data with default placeholder avatar/background
+ * Profile header using ViewModel data with avatar/cover from database
  */
 @Composable
 fun ProfileHeaderSectionReal(
     displayName: String,
     username: String,
-    onMenuClick: () -> Unit
+    onMenuClick: () -> Unit,
+    avatarUrl: String? = null,
+    coverUrl: String? = null
 ) {
     Box(modifier = Modifier.fillMaxWidth().height(280.dp)) {
-        // Default grey background
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(200.dp)
-                .background(
-                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                        colors = listOf(Color(0xFF2D3748), Color(0xFF1A202C))
+        // Cover image or default gradient background
+        if (coverUrl != null) {
+            coil.compose.AsyncImage(
+                model = coverUrl,
+                contentDescription = "Cover",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(200.dp)
+                    .background(
+                        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                            colors = listOf(Color(0xFF2D3748), Color(0xFF1A202C))
+                        )
                     )
-                )
-        )
+            )
+        }
 
         // Menu button with circular background for visibility
         IconButton(
@@ -307,21 +342,34 @@ fun ProfileHeaderSectionReal(
             modifier = Modifier.align(Alignment.BottomCenter),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Default person icon as avatar
-            Box(
-                modifier = Modifier
-                    .size(100.dp)
-                    .clip(CircleShape)
-                    .border(3.dp, Color.White, CircleShape)
-                    .background(Color(0xFF4A5568)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Person,
+            // Avatar - load from URL or show default icon
+            if (avatarUrl != null) {
+                coil.compose.AsyncImage(
+                    model = avatarUrl,
                     contentDescription = "Avatar",
-                    tint = Color.White,
-                    modifier = Modifier.size(56.dp)
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(CircleShape)
+                        .border(3.dp, Color.White, CircleShape)
+                        .background(Color(0xFF4A5568))
                 )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(CircleShape)
+                        .border(3.dp, Color.White, CircleShape)
+                        .background(Color(0xFF4A5568)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Avatar",
+                        tint = Color.White,
+                        modifier = Modifier.size(56.dp)
+                    )
+                }
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = displayName, fontSize = 24.sp, fontWeight = FontWeight.Bold)
@@ -639,10 +687,11 @@ fun HorizontalFilmSectionFromMovies(
     movies: List<com.example.myapplication.data.local.entities.Movie>,
     showSeeAll: Boolean = false,
     onSeeAllClick: () -> Unit = {},
-    maxItems: Int? = null
+    maxItems: Int? = null,
+    isOwnProfile: Boolean = true // Hide '+X more' button for other users
 ) {
     val displayMovies = if (maxItems != null && movies.size > maxItems) movies.take(maxItems) else movies
-    val remainingCount = if (maxItems != null && movies.size > maxItems) movies.size - maxItems else 0
+    val remainingCount = if (maxItems != null && movies.size > maxItems && isOwnProfile) movies.size - maxItems else 0
     
     Column(modifier = Modifier.padding(top = 24.dp)) {
         Row(
@@ -1121,3 +1170,138 @@ fun RecentReviewedSection(user: UserProfile, onSeeAllClick: () -> Unit) {
         }
     }
 }
+
+/**
+ * Recent Reviews section using database data - shows max 2 reviews with movie info
+ */
+@Composable
+fun RecentReviewedSectionDb(
+    reviews: List<ReviewWithMovie>,
+    displayName: String,
+    showSeeAll: Boolean = true,
+    onSeeAllClick: () -> Unit,
+    onReviewClick: (Int) -> Unit
+) {
+    Column(modifier = Modifier.padding(top = 24.dp, start = 16.dp, end = 16.dp)) {
+        // Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "$displayName's Recent Reviewed",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold
+            )
+            if (showSeeAll) {
+                Text(
+                    text = "See All",
+                    color = Color(0xFF00C02B),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.clickable { onSeeAllClick() }
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Review cards from database
+        reviews.forEach { reviewWithMovie ->
+            val review = reviewWithMovie.review
+            val movie = reviewWithMovie.movie
+            
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onReviewClick(review.id) }
+                    .background(Color(0xFFF9F9F9), RoundedCornerShape(12.dp))
+                    .padding(12.dp)
+            ) {
+                // Left Content
+                Column(modifier = Modifier.weight(1f)) {
+                    // Movie title and year
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(
+                            text = movie.title,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
+                        )
+                        movie.year?.let { year ->
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = year.toString(),
+                                fontSize = 10.sp,
+                                color = Color.Gray,
+                                modifier = Modifier.padding(bottom = 2.dp)
+                            )
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(4.dp))
+                    
+                    // Rating stars
+                    review.rating?.let { rating ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            val fullStars = rating.toInt()
+                            val hasHalf = (rating - fullStars) >= 0.5f
+                            repeat(fullStars) {
+                                Text("★", color = Color.Red, fontSize = 12.sp)
+                            }
+                            if (hasHalf) {
+                                Text("★", color = Color.Red.copy(alpha = 0.5f), fontSize = 12.sp)
+                            }
+                            repeat(5 - fullStars - (if (hasHalf) 1 else 0)) {
+                                Text("★", color = Color.LightGray, fontSize = 12.sp)
+                            }
+                        }
+                    }
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    // Review title if present
+                    review.title?.let { title ->
+                        Text(
+                            text = title,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                    }
+
+                    // Review body
+                    Text(
+                        text = review.body,
+                        fontSize = 11.sp,
+                        color = Color.DarkGray,
+                        lineHeight = 16.sp,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                // Movie Poster using AsyncImage
+                coil.compose.AsyncImage(
+                    model = movie.posterUrl,
+                    contentDescription = movie.title,
+                    modifier = Modifier
+                        .width(70.dp)
+                        .height(100.dp)
+                        .clip(RoundedCornerShape(8.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            }
+            
+            Spacer(modifier = Modifier.height(8.dp))
+        }
+    }
+}
+

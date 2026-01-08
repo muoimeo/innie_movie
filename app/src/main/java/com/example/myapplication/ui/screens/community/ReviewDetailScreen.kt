@@ -65,6 +65,10 @@ fun ReviewDetailScreen(
     var likeCount by remember { mutableIntStateOf(0) }
     var reviewerLikedMovie by remember { mutableStateOf(false) }
     
+    // Author info from database
+    var authorAvatar by remember { mutableStateOf<String?>(null) }
+    var authorName by remember { mutableStateOf("") }
+    
     // Snackbar state
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -92,6 +96,11 @@ fun ReviewDetailScreen(
                 // Check if the REVIEWER liked the movie (not current user)
                 reviewerLikedMovie = likeRepository.isLiked(r.authorId, "movie", r.movieId)
                 
+                // Load author info from database
+                val authorUser = db.userDao().getUserById(r.authorId)
+                authorAvatar = authorUser?.avatarUrl
+                authorName = authorUser?.displayName ?: authorUser?.username ?: r.authorId.replace("user_", "").replace("guest_", "")
+                
                 // Log view for watch history
                 userActivityRepository.logView(userId, "review", reviewId)
                 
@@ -114,10 +123,12 @@ fun ReviewDetailScreen(
     val movieData = movie
     
     // Get display name for header
-    val authorDisplayName = reviewData.authorId
-        .replace("user_", "")
-        .replace("guest_", "")
-        .replaceFirstChar { it.uppercase() }
+    val authorDisplayName = authorName.ifBlank { 
+        reviewData.authorId
+            .replace("user_", "")
+            .replace("guest_", "")
+            .replaceFirstChar { it.uppercase() }
+    }
     
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -229,20 +240,32 @@ fun ReviewDetailScreen(
                             navController?.navigate(Screen.UserProfile.createRoute(reviewData.authorId))
                         }
                     ) {
-                        // Author avatar
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFF4A5568)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = reviewData.authorId.take(1).uppercase(),
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
+                        // Author avatar - load from database or show fallback
+                        if (authorAvatar != null) {
+                            AsyncImage(
+                                model = authorAvatar,
+                                contentDescription = authorDisplayName,
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF4A5568)),
+                                contentScale = ContentScale.Crop
                             )
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF4A5568)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = authorDisplayName.take(1).uppercase(),
+                                    color = Color.White,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp
+                                )
+                            }
                         }
                         
                         Spacer(modifier = Modifier.width(12.dp))

@@ -35,6 +35,8 @@ import com.example.myapplication.data.local.entities.UserMovieStats
 import com.example.myapplication.data.local.entities.UserSettings
 import com.example.myapplication.data.local.entities.WatchlistCategory
 import com.example.myapplication.data.local.entities.WatchlistItem
+import com.example.myapplication.data.local.entities.ShowcaseMovie
+import com.example.myapplication.data.local.dao.ShowcaseDao
 
 @Database(
     entities = [
@@ -57,9 +59,10 @@ import com.example.myapplication.data.local.entities.WatchlistItem
         Comment::class,
         SavedAlbum::class,
         Follow::class,
-        Friendship::class
+        Friendship::class,
+        ShowcaseMovie::class
     ],
-    version = 34,
+    version = 37,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -81,5 +84,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun commentDao(): CommentDao
     abstract fun savedAlbumDao(): SavedAlbumDao
     abstract fun socialDao(): SocialDao
+    abstract fun showcaseDao(): ShowcaseDao
 }
 

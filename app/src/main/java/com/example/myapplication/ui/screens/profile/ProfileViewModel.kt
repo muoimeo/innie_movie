@@ -8,6 +8,7 @@ import com.example.myapplication.data.local.entities.Movie
 import com.example.myapplication.data.local.entities.UserActivity
 import com.example.myapplication.data.local.entities.Like
 import com.example.myapplication.data.local.entities.User
+import com.example.myapplication.data.local.entities.ReviewWithMovie
 import com.example.myapplication.data.repository.LikeRepository
 import com.example.myapplication.data.repository.UserActivityRepository
 import com.example.myapplication.data.repository.UserMovieRepository
@@ -37,6 +38,7 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val movieRepository = MovieRepository(database.movieDao())
     private val reviewRepository = ReviewRepository(database.reviewDao())
     private val socialRepository = SocialRepository(database.socialDao())
+    private val showcaseDao = database.showcaseDao()
     
     // Get userId from session manager (for own profile)
     private val currentUserId: String
@@ -101,6 +103,14 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     // Recent watched movies (from UserMovieStats)
     private val _recentWatchedMovies = MutableStateFlow<List<Movie>>(emptyList())
     val recentWatchedMovies: StateFlow<List<Movie>> = _recentWatchedMovies.asStateFlow()
+    
+    // Recent reviews by user (with movie data)
+    private val _recentReviews = MutableStateFlow<List<ReviewWithMovie>>(emptyList())
+    val recentReviews: StateFlow<List<ReviewWithMovie>> = _recentReviews.asStateFlow()
+    
+    // Showcase movies (3 slots for profile display - separate from likes)
+    private val _showcaseMovies = MutableStateFlow<List<Movie>>(emptyList())
+    val showcaseMovies: StateFlow<List<Movie>> = _showcaseMovies.asStateFlow()
     
     private val _isLoading = MutableStateFlow(true)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -212,10 +222,59 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
                     _isLoading.value = false
                 }
             }
+            
+            // Load recent reviews by user (max 2 for profile display)
+            launch {
+                reviewRepository.getReviewsByUserWithMovies(userId).collect { reviews ->
+                    _recentReviews.value = reviews.take(2)
+                }
+            }
+            
+            // Load showcase movies (3 slots)
+            launch {
+                showcaseDao.getShowcaseMovies(userId).collect { showcaseEntries ->
+                    val movies = showcaseEntries.mapNotNull { entry ->
+                        movieRepository.getMovieById(entry.movieId)
+                    }
+                    _showcaseMovies.value = movies
+                }
+            }
         }
     }
     
     fun refresh() {
         loadedUserId?.let { loadForUser(it) }
+    }
+    
+    /**
+     * Add a movie to showcase (automatically likes it too)
+     */
+    suspend fun addToShowcase(movieId: Int, slotPosition: Int) {
+        val userId = currentUserId
+        // Add to showcase
+        showcaseDao.addToShowcase(
+            com.example.myapplication.data.local.entities.ShowcaseMovie(
+                userId = userId,
+                movieId = movieId,
+                slotPosition = slotPosition
+            )
+        )
+        // Also like the movie
+        likeRepository.likeMovie(userId, movieId)
+    }
+    
+    /**
+     * Remove a movie from showcase (does NOT unlike it)
+     */
+    suspend fun removeFromShowcase(movieId: Int) {
+        showcaseDao.removeMovieFromShowcase(currentUserId, movieId)
+    }
+    
+    /**
+     * Get next available slot (0, 1, or 2)
+     */
+    suspend fun getNextAvailableSlot(): Int? {
+        val usedSlots = showcaseDao.getUsedSlots(currentUserId)
+        return (0..2).firstOrNull { it !in usedSlots }
     }
 }
