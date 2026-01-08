@@ -82,18 +82,18 @@ val movieCastCrewMap: Map<Int, MovieCastCrew> = mapOf(
         cast = listOf(
             CastInfo("Cillian Murphy", "J. Robert Oppenheimer", "https://image.tmdb.org/t/p/w185/dm6V24NjjvjMiCtbMkc8Y2WPm2e.jpg"),
             CastInfo("Emily Blunt", "Kitty Oppenheimer", "https://image.tmdb.org/t/p/w185/5nCSG5TL1bP1geD8aaBfaLnLLCD.jpg"),
-            CastInfo("Matt Damon", "Leslie Groves", "https://image.tmdb.org/t/p/w185/5lBz2l8M3RU0kS6FIVHZ1X0m10a.jpg"),
+            CastInfo("Matt Damon", "Leslie Groves", "https://image.tmdb.org/t/p/original/aCvBXTAR9B1qRjIRzMBYhhbm1fR.jpg"),
             CastInfo("Robert Downey Jr.", "Lewis Strauss", "https://image.tmdb.org/t/p/w185/im9SAqJPZKEbVZGmjXuLI4O7RvM.jpg"),
             CastInfo("Florence Pugh", "Jean Tatlock", "https://image.tmdb.org/t/p/w185/4SYTH5FdB0dAORV98Nwg3llgVnY.jpg"),
-            CastInfo("Josh Hartnett", "Ernest Lawrence", "https://image.tmdb.org/t/p/w185/sCXM3pVtRc8yyJzYXaafUL2lJhU.jpg"),
-            CastInfo("Casey Affleck", "Boris Pash", "https://image.tmdb.org/t/p/w185/hcggAoOQmPT7AjN8brV8TKCe0u6.jpg"),
-            CastInfo("Rami Malek", "David Hill", "https://image.tmdb.org/t/p/w185/eOryCCSpseHbTo30zMVN8dMpKMy.jpg")
+            CastInfo("Josh Hartnett", "Ernest Lawrence", "https://image.tmdb.org/t/p/original/dCfu2EN7FjISACcjilaJu7evwEc.jpg"),
+            CastInfo("Casey Affleck", "Boris Pash", "https://image.tmdb.org/t/p/original/304ilSygaCRWykoBWAL67TOw8g9.jpg"),
+            CastInfo("Rami Malek", "David Hill", "https://image.tmdb.org/t/p/original/ewr46CGOdsx5NzAJdIzEBz2yIQh.jpg")
         ),
         crew = listOf(
             CrewInfo("Christopher Nolan", "Director", "https://image.tmdb.org/t/p/w185/xuAIuYSmsUzKlUMBFGVZaWsY3DZ.jpg"),
-            CrewInfo("Emma Thomas", "Producer", avatarUrl("Emma Thomas")),
-            CrewInfo("Ludwig Göransson", "Composer", avatarUrl("Ludwig Goransson")),
-            CrewInfo("Hoyte van Hoytema", "Cinematographer", avatarUrl("Hoyte van Hoytema"))
+            CrewInfo("Emma Thomas", "Producer", "https://image.tmdb.org/t/p/original/utc1PS6WVWR5tknzTJqXtnD0kBp.jpg"),
+            CrewInfo("Ludwig Göransson", "Composer", "https://image.tmdb.org/t/p/original/5pcMPnicCdndaVYqWu163T5Zy3I.jpg"),
+            CrewInfo("Hoyte van Hoytema", "Cinematographer", "https://image.tmdb.org/t/p/original/y2HXvac1oPzciwxfdyWc5syThRk.jpg")
         )
     ),
 

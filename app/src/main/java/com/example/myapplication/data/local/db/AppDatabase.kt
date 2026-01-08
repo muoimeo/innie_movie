@@ -59,7 +59,7 @@ import com.example.myapplication.data.local.entities.WatchlistItem
         Follow::class,
         Friendship::class
     ],
-    version = 29,  // Added Notification entity for real-time notifications
+    version = 34,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

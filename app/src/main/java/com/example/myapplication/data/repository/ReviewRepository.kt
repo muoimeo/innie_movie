@@ -71,5 +71,8 @@ class ReviewRepository(private val dao: ReviewDao) {
     
     fun getReviewsByUserWithMovies(userId: String): Flow<List<ReviewWithMovie>> = 
         dao.getReviewsByUserWithMovies(userId)
+    
+    fun getEngagementSortedReviewsWithMovies(limit: Int = 20): Flow<List<ReviewWithMovie>> = 
+        dao.getRecentReviewsByEngagementWithMovies(limit)
 }
 

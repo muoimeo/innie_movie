@@ -58,6 +58,7 @@ fun WriteReviewScreen(
     val db = remember { com.example.myapplication.data.local.db.DatabaseProvider.getDatabase(context) }
     val reviewRepository = remember { com.example.myapplication.data.repository.ReviewRepository(db.reviewDao()) }
     val userActivityRepository = remember { com.example.myapplication.data.repository.UserActivityRepository(db.userActivityDao()) }
+    val likeRepository = remember { com.example.myapplication.data.repository.LikeRepository(db.likeDao()) }
     val userId = com.example.myapplication.data.session.UserSessionManager.getUserId()
     
     // Load movie data
@@ -65,18 +66,26 @@ fun WriteReviewScreen(
         viewModel.loadMovie(movieId)
     }
     
+    // Snackbar for feedback
+    val snackbarHostState = remember { SnackbarHostState() }
+    
     // State
     var watchedDate by remember { mutableStateOf(Date()) }
     var rating by remember { mutableIntStateOf(0) }
     var isLiked by remember { mutableStateOf(false) }
+    var reviewTitle by remember { mutableStateOf("") }
     var reviewText by remember { mutableStateOf("") }
     var showDatePicker by remember { mutableStateOf(false) }
     var isPublishing by remember { mutableStateOf(false) }
     
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = Color(0xFFF8F9FA)
+    ) { paddingValues ->
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF8F9FA))
+            .padding(paddingValues)
     ) {
         if (isLoading || movie == null) {
             CircularProgressIndicator(
@@ -306,11 +315,58 @@ fun WriteReviewScreen(
                 
                 Spacer(modifier = Modifier.height(24.dp))
                 
+                // Review title field (header)
+                Text(
+                    text = "Review Title (optional)",
+                    fontSize = 9.sp,
+                    color = Color(0xFF1A202C)
+                )
+                
+                Spacer(modifier = Modifier.height(6.dp))
+                
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                        .border(1.dp, Color(0xFFB3B3B3), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                ) {
+                    if (reviewTitle.isEmpty()) {
+                        Text(
+                            text = "Give your review a catchy title...",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFFB3B3B3).copy(alpha = 0.6f)
+                        )
+                    }
+                    BasicTextField(
+                        value = reviewTitle,
+                        onValueChange = { if (it.length <= 100) reviewTitle = it },
+                        textStyle = TextStyle(
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF1A202C)
+                        ),
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                
+                Text(
+                    text = "${reviewTitle.length}/100",
+                    fontSize = 8.sp,
+                    color = Color.Gray,
+                    modifier = Modifier.align(Alignment.End).padding(top = 2.dp)
+                )
+                
+                Spacer(modifier = Modifier.height(12.dp)
+                )
+                
                 // Review text area
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(410.dp)
+                        .height(280.dp)
                         .border(1.dp, Color(0xFFB3B3B3), RoundedCornerShape(20.dp))
                         .padding(18.dp)
                 ) {
@@ -353,12 +409,25 @@ fun WriteReviewScreen(
                                             userId = userId,
                                             movieId = movieId,
                                             body = reviewText,
-                                            rating = if (rating > 0) rating / 2f else null // Convert 1-10 to 0.5-5
+                                            rating = if (rating > 0) rating / 2f else null, // Convert 1-10 to 0.5-5
+                                            title = reviewTitle.ifBlank { null }
                                         )
+                                        
+                                        // Save like status if liked
+                                        if (isLiked) {
+                                            likeRepository.likeMovie(userId, movieId)
+                                        }
                                         
                                         // Log movie view for watch history (film is "watched" after review)
                                         userActivityRepository.logMovieView(userId, movieId)
                                     }
+                                    
+                                    // Show snackbar
+                                    snackbarHostState.showSnackbar(
+                                        message = "Review posted!",
+                                        duration = SnackbarDuration.Short
+                                    )
+                                    
                                     navController.popBackStack()
                                 }
                             }
@@ -392,6 +461,7 @@ fun WriteReviewScreen(
             )
         }
     }
+    } // End Scaffold
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

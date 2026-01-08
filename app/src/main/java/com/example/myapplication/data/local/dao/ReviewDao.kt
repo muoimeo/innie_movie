@@ -83,4 +83,16 @@ interface ReviewDao {
     // Get reviews for a specific movie (popular first)
     @Query("SELECT * FROM reviews WHERE movieId = :movieId ORDER BY createdAt DESC LIMIT :limit")
     fun getReviewsForMovie(movieId: Int, limit: Int = 10): Flow<List<Review>>
+
+    // Get engagement-sorted reviews with movie info (For You feed)
+    @Transaction
+    @Query("""
+        SELECT * FROM reviews 
+        ORDER BY (
+            (SELECT COUNT(*) FROM likes WHERE targetType = 'review' AND targetId = reviews.id) + 
+            (SELECT COUNT(*) FROM comments WHERE targetType = 'review' AND targetId = reviews.id)
+        ) DESC 
+        LIMIT :limit
+    """)
+    fun getRecentReviewsByEngagementWithMovies(limit: Int): Flow<List<ReviewWithMovie>>
 }

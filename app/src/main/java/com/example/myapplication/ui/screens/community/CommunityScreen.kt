@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GroupOff
 import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -59,8 +60,8 @@ fun CommunityContent(
     var selectedTab by remember { mutableIntStateOf(1) } // Default to "For you"
     val tabs = CommunityTopTap.entries
     
-    // Load reviews from database for "For you" tab
-    val forYouReviews by reviewRepository.getRecentReviewsWithMovies(20).collectAsState(initial = emptyList())
+    // Load reviews from database for "For you" tab - sorted by engagement (likes + comments)
+    val forYouReviews by reviewRepository.getEngagementSortedReviewsWithMovies(50).collectAsState(initial = emptyList())
     
     // Following reviews - dynamically fetched based on who current user follows
     val followingUserIds by socialRepository.getFollowing(currentUserId).collectAsState(initial = emptyList())
@@ -256,12 +257,16 @@ fun CommunityReviewItemDb(
     // Load author name and avatar from database
     var authorName by remember { mutableStateOf("") }
     var authorAvatar by remember { mutableStateOf<String?>(null) }
+    var commentCount by remember { mutableIntStateOf(0) }
     
-    LaunchedEffect(review.authorId) {
+    LaunchedEffect(review.authorId, review.review.id) {
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val user = db.userDao().getUserById(review.authorId)
             authorName = user?.displayName ?: user?.username ?: review.authorId.replace("user_", "").replace("guest_", "")
             authorAvatar = user?.avatarUrl
+            
+            // Load comment count for this review
+            commentCount = db.commentDao().countCommentsForContent("review", review.review.id)
         }
     }
     
@@ -279,15 +284,15 @@ fun CommunityReviewItemDb(
             ),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // CỘT 1: AVATAR - load from database or show initial
-        if (authorAvatar != null && !isOwnReview) {
+        // CỘT 1: AVATAR - load from database or show initial (for ALL users)
+        if (authorAvatar != null) {
             AsyncImage(
                 model = authorAvatar,
                 contentDescription = authorName,
                 modifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF4A5568)),
+                    .background(if (isOwnReview) InnieGreen else Color(0xFF4A5568)),
                 contentScale = ContentScale.Crop
             )
         } else {
@@ -354,6 +359,24 @@ fun CommunityReviewItemDb(
                             fontWeight = FontWeight.Bold
                         )
                         Text("★", color = Color.Red, fontSize = 11.sp)
+                    }
+                }
+                
+                // Comment count
+                if (commentCount > 0) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Outlined.ChatBubbleOutline,
+                            contentDescription = null,
+                            modifier = Modifier.size(12.dp),
+                            tint = Color.Gray
+                        )
+                        Spacer(modifier = Modifier.width(3.dp))
+                        Text(
+                            text = "$commentCount",
+                            fontSize = 11.sp,
+                            color = Color.Gray
+                        )
                     }
                 }
             }

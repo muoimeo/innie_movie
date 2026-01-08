@@ -36,6 +36,7 @@ import com.example.myapplication.data.getCastCrewForMovie
 import com.example.myapplication.data.CastInfo
 import com.example.myapplication.data.CrewInfo
 import com.example.myapplication.ui.theme.InnieGreen
+import com.example.myapplication.ui.navigation.Screen
 import androidx.compose.ui.platform.LocalContext
 
 // Data classes for movie details
@@ -626,7 +627,7 @@ fun MoviePage(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     dbReviews.forEach { review ->
-                        DatabaseReviewCard(review = review)
+                        DatabaseReviewCard(review = review, navController = navController)
                     }
                     
                     // See All button centered at bottom
@@ -809,7 +810,10 @@ fun ReviewCard(review: MovieReview) {
 
 // Database Review Card for reviews from DB
 @Composable
-fun DatabaseReviewCard(review: com.example.myapplication.data.local.entities.Review) {
+fun DatabaseReviewCard(
+    review: com.example.myapplication.data.local.entities.Review,
+    navController: NavController
+) {
     val context = LocalContext.current
     val db = com.example.myapplication.data.local.db.DatabaseProvider.getDatabase(context)
     var authorName by remember { mutableStateOf("") }
@@ -920,7 +924,9 @@ fun DatabaseReviewCard(review: com.example.myapplication.data.local.entities.Rev
                 fontSize = 12.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color(0xFF9C4A8B),
-                modifier = Modifier.clickable { }
+                modifier = Modifier.clickable { 
+                    navController.navigate(Screen.ReviewDetail.createRoute(review.id))
+                }
             )
         }
     }

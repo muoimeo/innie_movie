@@ -38,6 +38,7 @@ import com.example.myapplication.data.repository.ReviewRepository
 import com.example.myapplication.data.session.UserSessionManager
 import com.example.myapplication.ui.navigation.Screen
 import com.example.myapplication.ui.theme.InnieGreen
+import com.example.myapplication.data.repository.LikeRepository
 import kotlinx.coroutines.flow.collectLatest
 
 /**
@@ -49,6 +50,7 @@ fun ReviewsScreen(navController: NavController) {
     val context = LocalContext.current
     val db = remember { DatabaseProvider.getDatabase(context) }
     val reviewRepository = remember { ReviewRepository(db.reviewDao()) }
+    val likeRepository = remember { LikeRepository(db.likeDao()) }
     val userId = UserSessionManager.getUserId()
     
     var reviews by remember { mutableStateOf<List<ReviewWithMovie>>(emptyList()) }
@@ -130,6 +132,8 @@ fun ReviewsScreen(navController: NavController) {
                     items(reviews) { reviewWithMovie ->
                         UserReviewCard(
                             reviewWithMovie = reviewWithMovie,
+                            likeRepository = likeRepository,
+                            userId = userId,
                             onClick = {
                                 navController.navigate(Screen.ReviewDetail.createRoute(reviewWithMovie.review.id))
                             },
@@ -201,11 +205,21 @@ private fun ReviewsStatsHeader(reviewCount: Int) {
 @Composable
 private fun UserReviewCard(
     reviewWithMovie: ReviewWithMovie,
+    likeRepository: LikeRepository,
+    userId: String,
     onClick: () -> Unit,
     onMovieClick: () -> Unit
 ) {
     val review = reviewWithMovie.review
     val movie = reviewWithMovie.movie
+    
+    // Load like status for this movie
+    var isLiked by remember { mutableStateOf(false) }
+    LaunchedEffect(movie.id) {
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            isLiked = likeRepository.isLiked(userId, "movie", movie.id)
+        }
+    }
     
     Card(
         modifier = Modifier
@@ -324,6 +338,16 @@ private fun UserReviewCard(
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = InnieGreen
+                        )
+                        
+                        Spacer(modifier = Modifier.width(8.dp))
+                        
+                        // Heart icon showing like status
+                        Icon(
+                            imageVector = if (isLiked) Icons.Filled.Favorite else Icons.Default.FavoriteBorder,
+                            contentDescription = if (isLiked) "Liked" else "Not liked",
+                            tint = if (isLiked) Color.Red else Color.LightGray,
+                            modifier = Modifier.size(14.dp)
                         )
                     }
                 }

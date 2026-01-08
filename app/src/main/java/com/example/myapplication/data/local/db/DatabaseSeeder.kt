@@ -508,6 +508,58 @@ object DatabaseSeeder {
         listOf(1, 2, 3, 4, 5, 6, 7, 8, 9).forEachIndexed { index, movieId ->
             dao.addMovieToAlbum(com.example.myapplication.data.local.entities.AlbumMovie(nolanPremium.toInt(), movieId, index))
         }
+
+        // --- NEW ALBUMS REQUESTED BY USER ---
+
+        // 8. Cinematic Masterpieces (Vol. 2)
+        val mastersVol2 = dao.insertAlbum(com.example.myapplication.data.local.entities.Album(
+            ownerId = "user_marquee", title = "Cinematic Masterpieces (Vol. 2)", 
+            description = "Continuing the journey through film history with these essential classics. Every single one is a 10/10.",
+            coverUrl = "https://image.tmdb.org/t/p/w500/3bhkrj58Vtu7enYsRolD1fZdja1.jpg", privacy = "public", movieCount = 12
+        ))
+        listOf(21, 22, 23, 25, 27, 28, 29, 30, 31, 32, 34, 35).forEachIndexed { index, movieId ->
+            dao.addMovieToAlbum(com.example.myapplication.data.local.entities.AlbumMovie(mastersVol2.toInt(), movieId, index))
+        }
+
+        // 9. The Sci-Fi Odyssey
+        val sciFiOdyssey = dao.insertAlbum(com.example.myapplication.data.local.entities.Album(
+            ownerId = "user_nolan_fan", title = "The Sci-Fi Odyssey", 
+            description = "Exploring the boundaries of space, time, and human consciousness. A curated list of the best science fiction.",
+            coverUrl = "https://image.tmdb.org/t/p/w500/f89U3ADr1oiB1s9GkdPOEpXUk5H.jpg", privacy = "public", movieCount = 12
+        ))
+        listOf(4, 11, 24, 33, 37, 39, 40, 43, 44, 53, 69, 70).forEachIndexed { index, movieId ->
+            dao.addMovieToAlbum(com.example.myapplication.data.local.entities.AlbumMovie(sciFiOdyssey.toInt(), movieId, index))
+        }
+
+        // 10. Pixar & Ghibli Magic
+        val animationMagic = dao.insertAlbum(com.example.myapplication.data.local.entities.Album(
+            ownerId = "user_miles", title = "Pixar & Ghibli Magic", 
+            description = "Masterpieces from the two greatest animation studios. Visual wonders for all ages.",
+            coverUrl = "https://image.tmdb.org/t/p/w500/39wmItIWsg5sZMyRUHLkWBcuVCM.jpg", privacy = "public", movieCount = 12
+        ))
+        listOf(26, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68).forEachIndexed { index, movieId ->
+            dao.addMovieToAlbum(com.example.myapplication.data.local.entities.AlbumMovie(animationMagic.toInt(), movieId, index))
+        }
+
+        // 11. Modern Blockbusters
+        val modernHits = dao.insertAlbum(com.example.myapplication.data.local.entities.Album(
+            ownerId = "user_paul", title = "Modern Blockbusters", 
+            description = "The biggest and best films of the last few years. High stakes and incredible action.",
+            coverUrl = "https://image.tmdb.org/t/p/w500/1g0dhYtq4irTY1GPXvft6k4YLjm.jpg", privacy = "public", movieCount = 13
+        ))
+        listOf(2, 7, 9, 10, 36, 38, 45, 46, 47, 48, 49, 50, 51).forEachIndexed { index, movieId ->
+            dao.addMovieToAlbum(com.example.myapplication.data.local.entities.AlbumMovie(modernHits.toInt(), movieId, index))
+        }
+
+        // 12. Crime & Thriller Essentials
+        val crimeThrills = dao.insertAlbum(com.example.myapplication.data.local.entities.Album(
+            ownerId = "user_vengeance", title = "Crime & Thriller Essentials", 
+            description = "Gritty, tense, and absolutely gripping. These are the finest examples of the genre.",
+            coverUrl = "https://image.tmdb.org/t/p/w500/aKuFiU82s5ISJpGZp7YkIr3kCUd.jpg", privacy = "public", movieCount = 12
+        ))
+        listOf(1, 5, 6, 12, 13, 21, 22, 23, 27, 35, 54, 55).forEachIndexed { index, movieId ->
+            dao.addMovieToAlbum(com.example.myapplication.data.local.entities.AlbumMovie(crimeThrills.toInt(), movieId, index))
+        }
     }
     
     /**
@@ -904,12 +956,46 @@ object DatabaseSeeder {
                 4 to 15,    // Album 4: 225 likes
                 5 to 12,    // Album 5: 180 likes
                 6 to 10,    // Album 6: 150 likes
-                7 to 8      // Album 7: 120 likes
+                7 to 8,     // Album 7: 120 likes
+                8 to 35,    // Album 8: 525 likes (New)
+                9 to 40,    // Album 9: 600 likes (New)
+                10 to 45,   // Album 10: 675 likes (New)
+                11 to 50,   // Album 11: 750 likes (New)
+                12 to 55    // Album 12: 825 likes (New)
             )
             albumLikeCounts.forEach { (albumId, count) ->
                 repeat(count) { i ->
                     val fakeUserId = "user_synth_album${albumId}_liker_${userId}_$i"
                     likeDao.like(com.example.myapplication.data.local.entities.Like(fakeUserId, "album", albumId))
+                }
+            }
+            
+            // 6b. Synthetic Album Views (100-500 views per album)
+            val activityDao = database.userActivityDao()
+            val albumViewCounts = mapOf(
+                1 to 50,    // Each user adds views → 15 users × 50 = 750
+                2 to 40,
+                3 to 30,
+                4 to 25,
+                5 to 20,
+                6 to 18,
+                7 to 15,
+                8 to 60,    // New albums get more views
+                9 to 70,
+                10 to 80,
+                11 to 90,
+                12 to 100
+            )
+            albumViewCounts.forEach { (albumId, count) ->
+                repeat(count) { i ->
+                    val fakeUserId = "user_synth_album${albumId}_viewer_${userId}_$i"
+                    activityDao.log(com.example.myapplication.data.local.entities.UserActivity(
+                        userId = fakeUserId,
+                        actionType = "view",
+                        targetType = "album",
+                        targetId = albumId,
+                        createdAt = System.currentTimeMillis() - random.nextInt(100000000)
+                    ))
                 }
             }
             
@@ -926,7 +1012,7 @@ object DatabaseSeeder {
                 "These are all classics",
                 "Best albums on the app"
             )
-            (1..7).forEach { albumId ->
+            (1..12).forEach { albumId ->
                 if (random.nextFloat() < 0.6f) { // 60% chance to comment
                     commentDao.insert(com.example.myapplication.data.local.entities.Comment(
                         userId = userId,
@@ -969,15 +1055,29 @@ object DatabaseSeeder {
             )
             // Comment on reviews from OTHER users (not our own)
             val existingReviews = reviewDao.getReviewIdsSync()
-            existingReviews.take(10).forEach { reviewId ->
-                if (random.nextFloat() < 0.7f) { // 70% chance to comment on each review
-                    commentDao.insert(com.example.myapplication.data.local.entities.Comment(
-                        userId = userId,
-                        targetType = "review",
-                        targetId = reviewId,
-                        content = reviewCommentTemplates.random(),
-                        createdAt = System.currentTimeMillis() - random.nextInt(100000000)
-                    ))
+            existingReviews.forEach { reviewId ->
+                // High chance for high engagement on specific reviews to test sorting
+                val commentChance = if (reviewId % 3 == 0) 0.9f else 0.4f
+                val commentsPerUser = if (reviewId % 3 == 0) 5 else 1
+                
+                repeat(commentsPerUser) {
+                    if (random.nextFloat() < commentChance) {
+                        commentDao.insert(com.example.myapplication.data.local.entities.Comment(
+                            userId = userId,
+                            targetType = "review",
+                            targetId = reviewId,
+                            content = reviewCommentTemplates.random(),
+                            createdAt = System.currentTimeMillis() - random.nextInt(100000000)
+                        ))
+                    }
+                }
+
+                // Also boost likes for these reviews
+                if (reviewId % 3 == 0) {
+                    repeat(10) { i ->
+                        val fakeUserId = "user_synth_review${reviewId}_liker_${userId}_$i"
+                        likeDao.like(com.example.myapplication.data.local.entities.Like(fakeUserId, "review", reviewId))
+                    }
                 }
             }
         }
