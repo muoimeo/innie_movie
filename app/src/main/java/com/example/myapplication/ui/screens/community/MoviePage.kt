@@ -32,6 +32,9 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.myapplication.R
 import com.example.myapplication.data.local.entities.Movie
+import com.example.myapplication.data.getCastCrewForMovie
+import com.example.myapplication.data.CastInfo
+import com.example.myapplication.data.CrewInfo
 import com.example.myapplication.ui.theme.InnieGreen
 
 // Data classes for movie details
@@ -492,9 +495,10 @@ fun MoviePage(
                 }
             }
 
-            // Cast/Crew avatars - using sampleMovie for fake cast/crew data
-            val casts = sampleMovie.casts
-            val crews = sampleMovie.crews
+            // Cast/Crew avatars - using real cast/crew data from database
+            val castCrewData = getCastCrewForMovie(movie.id)
+            val casts = castCrewData?.cast ?: emptyList()
+            val crews = castCrewData?.crew ?: emptyList()
             
             LazyRow(
                 modifier = Modifier
@@ -503,39 +507,59 @@ fun MoviePage(
                 contentPadding = PaddingValues(horizontal = 20.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                val currentList = if (selectedTab == 0) casts else crews
-                items(currentList.size) { index ->
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(50.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFC4C4C4))
+                if (selectedTab == 0) {
+                    // Show Cast
+                    items(casts.size) { index ->
+                        val cast = casts[index]
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.width(60.dp)
                         ) {
-                            Image(
-                                painter = painterResource(
-                                    id = if (selectedTab == 0) 
-                                        casts[index].photoRes 
-                                    else 
-                                        crews[index].photoRes
-                                ),
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize(),
+                            AsyncImage(
+                                model = cast.imageUrl,
+                                contentDescription = cast.name,
+                                modifier = Modifier
+                                    .size(50.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFC4C4C4)),
                                 contentScale = ContentScale.Crop
                             )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = cast.name.split(" ").first(),
+                                fontSize = 10.sp,
+                                color = Color(0xFF1A202C),
+                                maxLines = 1,
+                                textAlign = TextAlign.Center
+                            )
                         }
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = if (selectedTab == 0) 
-                                casts[index].name.split(" ").first()
-                            else 
-                                crews[index].name.split(" ").first(),
-                            fontSize = 10.sp,
-                            color = Color(0xFF1A202C),
-                            maxLines = 1
-                        )
+                    }
+                } else {
+                    // Show Crew
+                    items(crews.size) { index ->
+                        val crew = crews[index]
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.width(60.dp)
+                        ) {
+                            AsyncImage(
+                                model = crew.imageUrl,
+                                contentDescription = crew.name,
+                                modifier = Modifier
+                                    .size(50.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFC4C4C4)),
+                                contentScale = ContentScale.Crop
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = crew.name.split(" ").first(),
+                                fontSize = 10.sp,
+                                color = Color(0xFF1A202C),
+                                maxLines = 1,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
                 }
             }

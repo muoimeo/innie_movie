@@ -183,6 +183,16 @@ fun ShotsFeed(
                         onDismiss = { showComments = false }
                     )
                 }
+                
+                // Share Bottom Sheet for this shot
+                if (showShare) {
+                    ShareBottomSheet(
+                        contentType = "shot",
+                        contentId = shot.id,
+                        contentTitle = shot.caption,
+                        onDismiss = { showShare = false }
+                    )
+                }
             }
         }
     }
@@ -199,6 +209,7 @@ fun ShotItem(
     realCommentCount: Int = 0,  // Real comment count from database
     onLikeClick: () -> Unit = {},
     onCommentClick: () -> Unit = {},
+    onShareClick: () -> Unit = {},
     onShareClick: () -> Unit = {},
     onMovieClick: (Int) -> Unit = {}
 ) {
@@ -371,6 +382,7 @@ fun ShotItem(
             ShotActionButton(
                 icon = Icons.Default.Share,
                 count = shot.shareCount,
+                onClick = onShareClick
                 onClick = onShareClick
             )
         }
