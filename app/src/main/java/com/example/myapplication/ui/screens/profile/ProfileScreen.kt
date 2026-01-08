@@ -28,6 +28,7 @@ import com.example.myapplication.data.sampleProfile
 import com.example.myapplication.data.recentReviewedJaws
 import kotlinx.coroutines.launch
 import com.example.myapplication.ui.navigation.Profile
+import com.example.myapplication.ui.navigation.Screen
 import com.example.myapplication.data.local.db.DatabaseProvider
 import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
@@ -59,6 +60,7 @@ fun ProfileScreen(
     val watchedCount by profileViewModel.watchedCount.collectAsState()
     val likeCount by profileViewModel.likeCount.collectAsState()
     val reviewCount by profileViewModel.reviewCount.collectAsState()
+    val albumCount by profileViewModel.albumCount.collectAsState()
     val likedMovies by profileViewModel.likedMovies.collectAsState()
     val recentWatchedMovies by profileViewModel.recentWatchedMovies.collectAsState()
     
@@ -120,19 +122,23 @@ fun ProfileScreen(
                         )
                     }
 
-                    // 2. Social Stats (Followers, Friends...)
+                    // 2. Social Stats (Followers, Friends...) - clickable for own profile
                     SocialStatsSectionReal(
                         followersCount = followersCount,
                         friendsCount = friendsCount,
-                        followingCount = followingCount
+                        followingCount = followingCount,
+                        isOwnProfile = isOwnProfile,
+                        onFollowersClick = { navController.navigate(Screen.SocialList.createRoute(0)) },
+                        onFriendsClick = { navController.navigate(Screen.SocialList.createRoute(1)) },
+                        onFollowingClick = { navController.navigate(Screen.SocialList.createRoute(2)) }
                     )
 
                     // 3. Activity Stats (Watched, Likes, Albums, Reviews)
                     ActivityStatsSectionReal(
                         watchedCount = watchedCount,
                         likesCount = likeCount,
-                        reviewCount = reviewCount,
-                        user = user
+                        albumCount = albumCount,
+                        reviewCount = reviewCount
                     )
 
                     // 4. Favorite Films - Exactly 3 Slots (like profile customization)
@@ -430,27 +436,54 @@ fun ProfileHeaderSectionOther(
 }
 
 /**
- * Social stats section using ViewModel values
+ * Social stats section using ViewModel values - clickable for own profile
  */
 @Composable
 fun SocialStatsSectionReal(
     followersCount: Int,
     friendsCount: Int,
-    followingCount: Int
+    followingCount: Int,
+    isOwnProfile: Boolean = false,
+    onFollowersClick: () -> Unit = {},
+    onFriendsClick: () -> Unit = {},
+    onFollowingClick: () -> Unit = {}
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        SocialItem(followersCount.toString(), "Followers")
-        SocialItem(friendsCount.toString(), "Friends")
-        SocialItem(followingCount.toString(), "Followings")
+        SocialItem(
+            count = followersCount.toString(),
+            label = "Followers",
+            isClickable = isOwnProfile,
+            onClick = onFollowersClick
+        )
+        SocialItem(
+            count = friendsCount.toString(),
+            label = "Friends",
+            isClickable = isOwnProfile,
+            onClick = onFriendsClick
+        )
+        SocialItem(
+            count = followingCount.toString(),
+            label = "Followings",
+            isClickable = isOwnProfile,
+            onClick = onFollowingClick
+        )
     }
 }
 
 @Composable
-fun SocialItem(count: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+fun SocialItem(
+    count: String,
+    label: String,
+    isClickable: Boolean = false,
+    onClick: () -> Unit = {}
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = if (isClickable) Modifier.clickable { onClick() } else Modifier
+    ) {
         Text(text = count, fontWeight = FontWeight.Bold, fontSize = 16.sp)
         Box(modifier = Modifier.width(40.dp).height(2.dp).background(Color(0xFF00C02B)))
         Text(text = label, fontSize = 12.sp, color = Color.Gray)
@@ -576,14 +609,14 @@ fun ActivityStatItem(count: Int, label: String, color: Color) {
 }
 
 /**
- * Activity stats section using real database values for Watched and Likes
+ * Activity stats section using real database values for Watched, Likes, Albums, Reviews
  */
 @Composable
 fun ActivityStatsSectionReal(
     watchedCount: Int,
     likesCount: Int,
-    reviewCount: Int,
-    user: UserProfile
+    albumCount: Int,
+    reviewCount: Int
 ) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(top = 24.dp),
@@ -591,7 +624,7 @@ fun ActivityStatsSectionReal(
     ) {
         ActivityStatItem(watchedCount, "Watched", Color(0xFF00C02B))
         ActivityStatItem(likesCount, "Likes", Color(0xFFB34393))
-        ActivityStatItem(user.albumsCount, "Albums", Color(0xFF00C02B))
+        ActivityStatItem(albumCount, "Albums", Color(0xFF00C02B))
         ActivityStatItem(reviewCount, "Reviews", Color(0xFFB34393))
     }
 }

@@ -16,6 +16,11 @@ sealed class Screen(val route: String) {
     data object Likes : Screen("likes")
 
     data object Settings : Screen("settings")
+    
+    // Social list screen with initial tab (0=followers, 1=friends, 2=following)
+    data object SocialList : Screen("social_list/{initialTab}") {
+        fun createRoute(initialTab: Int) = "social_list/$initialTab"
+    }
 
     data object MoviePage : Screen("movie_page/{movieId}") {
         fun createRoute(movieId: Int) = "movie_page/$movieId"

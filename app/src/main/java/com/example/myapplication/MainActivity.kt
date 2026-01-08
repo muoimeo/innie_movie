@@ -172,6 +172,17 @@ class MainActivity : ComponentActivity() {
                     }
                     
                     composable(
+                        route = Screen.SocialList.route,
+                        arguments = listOf(navArgument("initialTab") { type = NavType.IntType })
+                    ) { backStackEntry ->
+                        val initialTab = backStackEntry.arguments?.getInt("initialTab") ?: 0
+                        com.example.myapplication.ui.screens.profile.SocialListScreen(
+                            navController = navController,
+                            initialTab = initialTab
+                        )
+                    }
+                    
+                    composable(
                         route = Screen.WriteReview.route,
                         arguments = listOf(navArgument("movieId") { type = NavType.IntType })
                     ) { backStackEntry ->

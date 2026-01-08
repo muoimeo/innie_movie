@@ -45,6 +45,10 @@ interface AlbumDao {
     @Query("SELECT * FROM albums WHERE privacy = 'public' ORDER BY createdAt DESC")
     fun getPublicAlbums(): Flow<List<Album>>
     
+    // Count albums created by user
+    @Query("SELECT COUNT(*) FROM albums WHERE ownerId = :userId")
+    fun countAlbumsByUser(userId: String): Flow<Int>
+    
     // Search albums
     @Query("SELECT * FROM albums WHERE title LIKE '%' || :query || '%' ORDER BY title")
     fun searchAlbums(query: String): Flow<List<Album>>

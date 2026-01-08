@@ -84,6 +84,10 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
     private val _reviewCount = MutableStateFlow(0)
     val reviewCount: StateFlow<Int> = _reviewCount.asStateFlow()
     
+    // Album count (albums created by user)
+    private val _albumCount = MutableStateFlow(0)
+    val albumCount: StateFlow<Int> = _albumCount.asStateFlow()
+    
     // Content lists
     private val _recentActivity = MutableStateFlow<List<UserActivity>>(emptyList())
     val recentActivity: StateFlow<List<UserActivity>> = _recentActivity.asStateFlow()
@@ -153,6 +157,12 @@ class ProfileViewModel(application: Application) : AndroidViewModel(application)
             launch {
                 reviewRepository.getUserReviewCount(userId).collect { count ->
                     _reviewCount.value = count
+                }
+            }
+            
+            launch {
+                database.albumDao().countAlbumsByUser(userId).collect { count ->
+                    _albumCount.value = count
                 }
             }
             

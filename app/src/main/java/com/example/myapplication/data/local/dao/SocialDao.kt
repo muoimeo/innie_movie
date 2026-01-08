@@ -87,4 +87,15 @@ interface SocialDao {
     // Check if friend request pending from user
     @Query("SELECT EXISTS(SELECT 1 FROM friendships WHERE userId1 = :fromUser AND userId2 = :toUser AND status = 'pending')")
     suspend fun hasPendingRequest(fromUser: String, toUser: String): Boolean
+    
+    // Get friends list (accepted friendships) - get the other user's ID
+    @Query("""
+        SELECT CASE 
+            WHEN userId1 = :userId THEN userId2 
+            ELSE userId1 
+        END FROM friendships 
+        WHERE (userId1 = :userId OR userId2 = :userId) 
+          AND status = 'accepted'
+    """)
+    fun getFriends(userId: String): Flow<List<String>>
 }
