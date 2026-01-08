@@ -7,6 +7,7 @@ import com.example.myapplication.data.local.dao.CommentDao
 import com.example.myapplication.data.local.dao.LikeDao
 import com.example.myapplication.data.local.dao.MovieDao
 import com.example.myapplication.data.local.dao.NewsDao
+import com.example.myapplication.data.local.dao.NotificationDao
 import com.example.myapplication.data.local.dao.ReviewDao
 import com.example.myapplication.data.local.dao.SavedAlbumDao
 import com.example.myapplication.data.local.dao.ShotDao
@@ -24,6 +25,7 @@ import com.example.myapplication.data.local.entities.Friendship
 import com.example.myapplication.data.local.entities.Like
 import com.example.myapplication.data.local.entities.Movie
 import com.example.myapplication.data.local.entities.News
+import com.example.myapplication.data.local.entities.Notification
 import com.example.myapplication.data.local.entities.Review
 import com.example.myapplication.data.local.entities.SavedAlbum
 import com.example.myapplication.data.local.entities.Shot
@@ -44,6 +46,7 @@ import com.example.myapplication.data.local.entities.WatchlistItem
         News::class,
         Shot::class,
         Review::class,
+        Notification::class,
         // User data entities
         UserSettings::class,
         UserMovieStats::class,
@@ -56,7 +59,7 @@ import com.example.myapplication.data.local.entities.WatchlistItem
         Follow::class,
         Friendship::class
     ],
-    version = 29,  // Reduced synthetic stats for better diversity, fixed Profile crash
+    version = 29,  // Added Notification entity for real-time notifications
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -67,6 +70,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun newsDao(): NewsDao
     abstract fun shotDao(): ShotDao
     abstract fun reviewDao(): ReviewDao
+    abstract fun notificationDao(): NotificationDao
     
     // User data DAOs
     abstract fun userSettingsDao(): UserSettingsDao
@@ -78,3 +82,4 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun savedAlbumDao(): SavedAlbumDao
     abstract fun socialDao(): SocialDao
 }
+

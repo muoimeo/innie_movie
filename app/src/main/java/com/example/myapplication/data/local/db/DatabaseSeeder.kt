@@ -2,6 +2,7 @@ package com.example.myapplication.data.local.db
 
 import android.content.Context
 import com.example.myapplication.data.local.entities.Comment
+import com.example.myapplication.data.local.entities.Notification
 import com.example.myapplication.data.local.entities.Review
 import com.example.myapplication.data.local.entities.User
 import com.example.myapplication.data.local.entities.UserMovieStats
@@ -31,6 +32,7 @@ object DatabaseSeeder {
                 val commentDao = database.commentDao()
                 val movieDao = database.movieDao()
                 val userMovieStatsDao = database.userMovieStatsDao()
+                val notificationDao = database.notificationDao()
                 
                 // Check if users already exist
                 val existingUsers = userDao.getUserById("user_marquee")
@@ -85,6 +87,9 @@ object DatabaseSeeder {
                             validMovieIds, 
                             listOf("user_marquee", "user_paul", "user_nolan_fan", "user_evelyn", "user_miles", "user_vengeance", "user_scientist", "user_cooper", "user_bruce", "user_bong", "user_ken", "user_maverick", "user_cobb", "user_arthur", "user_chani")
                         )
+                        
+                        // Seed sample notifications for demo user
+                        seedSampleNotifications(notificationDao)
                     }
                 }
                 
@@ -977,4 +982,160 @@ object DatabaseSeeder {
             }
         }
     }
+    
+    /**
+     * Seed sample notifications for the demo user.
+     */
+    private suspend fun seedSampleNotifications(
+        notificationDao: com.example.myapplication.data.local.dao.NotificationDao
+    ) {
+        val currentUserId = "guest_user" // Must match UserSessionManager.GUEST_USER_ID
+        val currentTime = System.currentTimeMillis()
+        
+        val sampleNotifications = listOf(
+            // NEWS notifications
+            Notification(
+                userId = currentUserId,
+                type = "NEWS",
+                title = "Dune: Part Three Officially Greenlit",
+                description = "Warner Bros. has officially greenlit Dune: Part Three. Denis Villeneuve's epic sci-fi saga continues!",
+                imageUrl = "https://image.tmdb.org/t/p/w500/1pdfLvkbY9ohJlCjQH2CZjjYVvJ.jpg",
+                relatedType = "news",
+                relatedId = 2,
+                isRead = false,
+                createdAt = currentTime - 2 * 3600000 // 2 hours ago
+            ),
+            Notification(
+                userId = currentUserId,
+                type = "NEWS",
+                title = "Marvel Studios Announces Phase 7 Slate",
+                description = "Kevin Feige unveils Marvel's new direction with fewer films and higher stakes.",
+                imageUrl = "https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg",
+                relatedType = "news",
+                relatedId = 6,
+                isRead = false,
+                createdAt = currentTime - 5 * 3600000 // 5 hours ago
+            ),
+            Notification(
+                userId = currentUserId,
+                type = "NEWS",
+                title = "The Batman 2: Villain Details Revealed",
+                description = "Matt Reeves shares exclusive details about The Batman sequel, teasing the Court of Owls.",
+                imageUrl = "https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg",
+                relatedType = "news",
+                relatedId = 4,
+                isRead = true,
+                createdAt = currentTime - 24 * 3600000 // 1 day ago
+            ),
+            
+            // TRAILER notifications
+            Notification(
+                userId = currentUserId,
+                type = "TRAILER",
+                title = "Oppenheimer - Now Streaming",
+                description = "Christopher Nolan's Oscar-winning masterpiece is now available to stream!",
+                imageUrl = "https://image.tmdb.org/t/p/w500/8Gxv8gSFCU0XGDykEGv7zR1n2ua.jpg",
+                relatedType = "movie",
+                relatedId = 3,
+                isRead = false,
+                createdAt = currentTime - 3 * 3600000 // 3 hours ago
+            ),
+            Notification(
+                userId = currentUserId,
+                type = "TRAILER",
+                title = "Spider-Man: Across the Spider-Verse",
+                description = "The critically acclaimed animated sequel is now available!",
+                imageUrl = "https://image.tmdb.org/t/p/w500/8Vt6mWEReuy4Of61Lnj5Xj704m8.jpg",
+                relatedType = "movie",
+                relatedId = 7,
+                isRead = true,
+                createdAt = currentTime - 24 * 3600000 // 1 day ago
+            ),
+            
+            // FRIEND notifications (follows, album activity)
+            Notification(
+                userId = currentUserId,
+                type = "FRIEND",
+                title = "Paul started following you",
+                description = "Check out their profile!",
+                imageUrl = "https://i.pravatar.cc/150?u=user_paul",
+                relatedType = "user",
+                relatedId = null,
+                actorUserId = "user_paul",
+                actorName = "Paul",
+                isRead = false,
+                createdAt = currentTime - 4 * 3600000 // 4 hours ago
+            ),
+            Notification(
+                userId = currentUserId,
+                type = "FRIEND",
+                title = "New Album: A-MUST-WATCH OAT!!",
+                description = "Check out this curated collection of masterpieces!",
+                imageUrl = "https://image.tmdb.org/t/p/w500/74xTEgt7R36Fpooo50r9T25onhq.jpg",
+                relatedType = "album",
+                relatedId = 1,
+                isRead = false,
+                createdAt = currentTime - 6 * 3600000 // 6 hours ago
+            ),
+            Notification(
+                userId = currentUserId,
+                type = "FRIEND",
+                title = "Nolan Fan started following you",
+                description = "Check out their profile!",
+                imageUrl = "https://i.pravatar.cc/150?u=user_nolan_fan",
+                relatedType = "user",
+                relatedId = null,
+                actorUserId = "user_nolan_fan",
+                actorName = "Nolan Fan",
+                isRead = true,
+                createdAt = currentTime - 48 * 3600000 // 2 days ago
+            ),
+            
+            // COMMENT notifications
+            Notification(
+                userId = currentUserId,
+                type = "COMMENT",
+                title = "Evelyn commented on your review",
+                description = "\"The Batman\" review: Great analysis! 👏",
+                imageUrl = "https://i.pravatar.cc/150?u=user_evelyn",
+                relatedType = "review",
+                relatedId = 1,
+                actorUserId = "user_evelyn",
+                actorName = "Evelyn",
+                isRead = false,
+                createdAt = currentTime - 1 * 3600000 // 1 hour ago
+            ),
+            Notification(
+                userId = currentUserId,
+                type = "COMMENT",
+                title = "Miles replied to your comment",
+                description = "On \"Dune: Part Two\" discussion",
+                imageUrl = "https://i.pravatar.cc/150?u=user_miles",
+                relatedType = "movie",
+                relatedId = 2,
+                actorUserId = "user_miles",
+                actorName = "Miles",
+                isRead = false,
+                createdAt = currentTime - 30 * 60000 // 30 minutes ago
+            ),
+            Notification(
+                userId = currentUserId,
+                type = "COMMENT",
+                title = "Chani commented on your album",
+                description = "\"Best of 2023\" album: Love this collection!",
+                imageUrl = "https://i.pravatar.cc/150?u=user_chani",
+                relatedType = "album",
+                relatedId = 3,
+                actorUserId = "user_chani",
+                actorName = "Chani",
+                isRead = true,
+                createdAt = currentTime - 72 * 3600000 // 3 days ago
+            )
+        )
+        
+        sampleNotifications.forEach { notification ->
+            notificationDao.insert(notification)
+        }
+    }
 }
+

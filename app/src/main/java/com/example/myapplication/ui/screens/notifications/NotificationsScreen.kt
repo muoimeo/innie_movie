@@ -19,19 +19,23 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import coil.compose.AsyncImage
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.myapplication.data.NotificationItem
 import com.example.myapplication.data.NotificationPreferencesManager
-import com.example.myapplication.data.NotificationType
-import com.example.myapplication.data.sampleNotifications
+import com.example.myapplication.data.local.db.DatabaseProvider
+import com.example.myapplication.data.local.entities.Notification
+import com.example.myapplication.data.session.UserSessionManager
 import androidx.compose.material.icons.filled.Article
 import androidx.compose.material.icons.filled.ChatBubble
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.Person
 import androidx.navigation.NavController
 import com.example.myapplication.ui.navigation.Screen
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -41,26 +45,35 @@ fun NotificationsScreen(
     onBackClick: () -> Unit = {}
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val prefsManager = remember { NotificationPreferencesManager(context) }
+    val db = remember { DatabaseProvider.getDatabase(context) }
+    val currentUserId = UserSessionManager.getUserId()
     
-    // Filter notifications based on preferences
-    val filteredNotifications = remember(prefsManager) {
-        sampleNotifications.filter { notification ->
-            prefsManager.shouldShowNotification(notification.type)
+    // Load notifications from database
+    var notifications by remember { mutableStateOf<List<Notification>>(emptyList()) }
+    var isLoading by remember { mutableStateOf(true) }
+    
+    LaunchedEffect(currentUserId) {
+        withContext(Dispatchers.IO) {
+            val allNotifications = db.notificationDao().getNotificationsForUserOnce(currentUserId)
+            // Filter by preferences
+            notifications = allNotifications.filter { notification ->
+                prefsManager.shouldShowNotification(
+                    when (notification.type) {
+                        "NEWS" -> com.example.myapplication.data.NotificationType.NEWS
+                        "COMMENT" -> com.example.myapplication.data.NotificationType.COMMENT
+                        "TRAILER" -> com.example.myapplication.data.NotificationType.TRAILER
+                        "FRIEND" -> com.example.myapplication.data.NotificationType.FRIEND
+                        else -> com.example.myapplication.data.NotificationType.NEWS
+                    }
+                )
+            }
         }
+        isLoading = false
     }
     
-    // Use mutableState to allow re-filtering and deletion
-    var notifications by remember { mutableStateOf(filteredNotifications) }
-    
-    // Refresh notifications when screen is recomposed (e.g., returning from settings)
-    LaunchedEffect(Unit) {
-        notifications = sampleNotifications.filter { notification ->
-            prefsManager.shouldShowNotification(notification.type)
-        }
-    }
-    
-    var selectedNotification by remember { mutableStateOf<NotificationItem?>(null) }
+    var selectedNotification by remember { mutableStateOf<Notification?>(null) }
     val sheetState = rememberModalBottomSheetState()
 
     Scaffold(
@@ -74,7 +87,16 @@ fun NotificationsScreen(
         },
         containerColor = Color.White
     ) { paddingValues ->
-        if (notifications.isEmpty()) {
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = Color(0xFF00C02B))
+            }
+        } else if (notifications.isEmpty()) {
             // Empty state when all notifications are filtered out
             Box(
                 modifier = Modifier
@@ -94,10 +116,10 @@ fun NotificationsScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "You've turned off all notification types.\nGo to Settings > Notifications to enable them.",
+                        text = "You don't have any notifications yet.\nInteract with the app to receive notifications!",
                         fontSize = 14.sp,
                         color = Color.LightGray,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        textAlign = TextAlign.Center
                     )
                 }
             }
@@ -113,21 +135,51 @@ fun NotificationsScreen(
                         notification = notification,
                         onMenuClick = { selectedNotification = notification },
                         onClick = {
+                            // Mark as read
+                            scope.launch(Dispatchers.IO) {
+                                db.notificationDao().markAsRead(notification.id)
+                                // Update local list
+                                notifications = notifications.map {
+                                    if (it.id == notification.id) it.copy(isRead = true) else it
+                                }
+                            }
+                            
                             // Navigate based on notification type
                             navController?.let { nav ->
                                 when (notification.type) {
-                                    NotificationType.NEWS -> {
-                                        nav.navigate(Screen.NewsDetail.createRoute(notification.relatedId))
+                                    "NEWS" -> {
+                                        notification.relatedId?.let { id ->
+                                            nav.navigate(Screen.NewsDetail.createRoute(id))
+                                        }
                                     }
-                                    NotificationType.TRAILER -> {
-                                        nav.navigate(Screen.MoviePage.createRoute(notification.relatedId))
+                                    "TRAILER" -> {
+                                        notification.relatedId?.let { id ->
+                                            nav.navigate(Screen.MoviePage.createRoute(id))
+                                        }
                                     }
-                                    NotificationType.FRIEND -> {
-                                        nav.navigate(Screen.AlbumDetail.createRoute(notification.relatedId))
+                                    "FRIEND" -> {
+                                        when (notification.relatedType) {
+                                            "album" -> notification.relatedId?.let { id ->
+                                                nav.navigate(Screen.AlbumDetail.createRoute(id))
+                                            }
+                                            "user" -> {
+                                                // TODO: Navigate to user profile when available
+                                            }
+                                        }
                                     }
-                                    NotificationType.COMMENT -> {
-                                        // For comments, could navigate to the related content
-                                        // For now, just do nothing as no comments exist yet
+                                    "COMMENT" -> {
+                                        when (notification.relatedType) {
+                                            "review" -> notification.relatedId?.let { id ->
+                                                // Navigate to movie of the review
+                                                nav.navigate(Screen.MoviePage.createRoute(id))
+                                            }
+                                            "movie" -> notification.relatedId?.let { id ->
+                                                nav.navigate(Screen.MoviePage.createRoute(id))
+                                            }
+                                            "album" -> notification.relatedId?.let { id ->
+                                                nav.navigate(Screen.AlbumDetail.createRoute(id))
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -155,9 +207,20 @@ fun NotificationsScreen(
                         headlineContent = { Text("Delete this notification") },
                         leadingContent = { Icon(Icons.Outlined.Delete, contentDescription = null) },
                         modifier = Modifier.clickable {
-                            // Remove from list
-                            notifications = notifications.filter { it.id != selectedNotification?.id }
-                            selectedNotification = null
+                            val notifToDelete = selectedNotification
+                            selectedNotification = null // Close sheet first
+                            
+                            // Delete from database and update UI
+                            notifToDelete?.let { notif ->
+                                scope.launch {
+                                    // Delete from database on IO thread
+                                    withContext(Dispatchers.IO) {
+                                        db.notificationDao().deleteById(notif.id)
+                                    }
+                                    // Update UI on Main thread
+                                    notifications = notifications.filter { it.id != notif.id }
+                                }
+                            }
                         }
                     )
                 }
@@ -168,7 +231,7 @@ fun NotificationsScreen(
 
 @Composable
 fun NotificationRow(
-    notification: NotificationItem,
+    notification: Notification,
     onMenuClick: () -> Unit,
     onClick: () -> Unit
 ) {
@@ -176,7 +239,8 @@ fun NotificationRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .background(if (notification.isRead) Color.White else Color(0xFFEEEEEE))
+            // Unread = gray background, Read = white background
+            .background(if (!notification.isRead) Color(0xFFEEEEEE) else Color.White)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.Top
     ) {
@@ -193,81 +257,83 @@ fun NotificationRow(
             
             // Type Badge - small circle at bottom-right
             val (badgeColor, badgeIcon) = when (notification.type) {
-                NotificationType.NEWS -> Color(0xFFFFC107) to Icons.Filled.Article  // Yellow
-                NotificationType.COMMENT -> Color(0xFF00C02B) to Icons.Filled.ChatBubble  // Green
-                NotificationType.TRAILER -> Color(0xFF2196F3) to Icons.Filled.Movie  // Blue
-                NotificationType.FRIEND -> Color(0xFF9C27B0) to Icons.Filled.Person  // Purple
+                "NEWS" -> Color(0xFFFFC107) to Icons.Filled.Article  // Yellow
+                "COMMENT" -> Color(0xFF00C02B) to Icons.Filled.ChatBubble  // Green
+                "TRAILER" -> Color(0xFF2196F3) to Icons.Filled.Movie  // Blue
+                "FRIEND" -> Color(0xFF9C27B0) to Icons.Filled.Person  // Purple
+                else -> Color.Gray to Icons.Filled.Article
             }
             
             Box(
                 modifier = Modifier
-                    .size(24.dp)
                     .align(Alignment.BottomEnd)
-                    .clip(CircleShape)
-                    .background(badgeColor),
+                    .size(22.dp)
+                    .background(badgeColor, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = badgeIcon,
-                    contentDescription = "Notification Type",
+                    contentDescription = null,
                     tint = Color.White,
-                    modifier = Modifier.size(14.dp)
+                    modifier = Modifier.size(12.dp)
                 )
             }
         }
-
-        Spacer(modifier = Modifier.width(16.dp))
-
+        
+        Spacer(modifier = Modifier.width(12.dp))
+        
+        // Content
         Column(modifier = Modifier.weight(1f)) {
-            // Title + 3-dot Menu Row
-            Row(
-                verticalAlignment = Alignment.Top,
-                horizontalArrangement = Arrangement.SpaceBetween,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    text = notification.title,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = Color.Black,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f).padding(end = 8.dp)
-                )
-
-                // 3-dot Menu Icon
-                IconButton(
-                    onClick = onMenuClick,
-                    modifier = Modifier.size(24.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.MoreHoriz,
-                        contentDescription = "Menu",
-                        tint = Color.Gray
-                    )
-                }
-            }
-            
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Description
             Text(
-                text = notification.description,
-                fontSize = 14.sp,
-                color = Color.DarkGray,
-                lineHeight = 20.sp,
+                text = notification.title,
+                fontSize = 15.sp,
+                fontWeight = if (!notification.isRead) FontWeight.Bold else FontWeight.Medium,
+                color = Color.Black,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
-            
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Time (below text as requested)
+            Spacer(modifier = Modifier.height(2.dp))
             Text(
-                text = notification.time,
-                fontSize = 12.sp,
-                color = Color.Gray
+                text = notification.description,
+                fontSize = 13.sp,
+                color = Color.Gray,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = formatNotificationTime(notification.createdAt),
+                fontSize = 11.sp,
+                color = Color.LightGray
             )
         }
+        
+        // More options button
+        IconButton(
+            onClick = onMenuClick,
+            modifier = Modifier.size(24.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.MoreHoriz,
+                contentDescription = "More options",
+                tint = Color.Gray
+            )
+        }
+    }
+}
+
+private fun formatNotificationTime(timestamp: Long): String {
+    val now = System.currentTimeMillis()
+    val diff = now - timestamp
+    val minutes = diff / (1000 * 60)
+    val hours = minutes / 60
+    val days = hours / 24
+    
+    return when {
+        minutes < 1 -> "Just now"
+        minutes < 60 -> "${minutes}m ago"
+        hours < 24 -> "${hours}h ago"
+        days < 7 -> "${days}d ago"
+        else -> "${days / 7}w ago"
     }
 }
